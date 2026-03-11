@@ -115,6 +115,10 @@
         color: #666;
         font-size: 15px;
     }
+
+    .active-row {
+        background-color: #fffdf3;
+    }
 </style>
 
 <div class="wrap" dir="rtl">
@@ -132,7 +136,7 @@
                 </div>
             }
 
-            <div class="section">
+            <div class="section" @ref="_formSectionRef">
                 <div class="sec-title">@(_editMode ? "تعديل قسم" : "إضافة قسم جديد")</div>
 
                 <EditForm EditContext="_editContext" OnValidSubmit="Save">
@@ -142,7 +146,7 @@
                     <div class="grid">
                         <div>
                             <label class="form-label">اسم القسم</label>
-                            <InputText class="form-control" @bind-Value="_form.Name" />
+                            <input class="form-control" @bind="_form.Name" @ref="_nameInputRef" />
                             <ValidationMessage For="@(() => _form.Name)" />
                         </div>
 
@@ -159,7 +163,9 @@
 
                             @if (_editMode)
                             {
-                                <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">إلغاء</button>
+                                <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">
+                                    إلغاء
+                                </button>
                             }
                         </div>
                     </div>
@@ -199,7 +205,7 @@
                             <tbody>
                                 @foreach (var x in Filtered())
                                 {
-                                    <tr>
+                                    <tr class="@(IsEditingRow(x.Id) ? "active-row" : "")">
                                         <td><strong>@x.Id</strong></td>
                                         <td>@x.Name</td>
                                         <td>@x.FacultyName</td>
@@ -244,11 +250,14 @@
 
     private bool _saving = false;
     private bool _editMode = false;
-    private string _q = "";
+    private string _q = string.Empty;
 
     private List<Department> _items = new();
     private DepartmentForm _form = new();
     private EditContext _editContext = default!;
+
+    private ElementReference _formSectionRef;
+    private ElementReference _nameInputRef;
 
     protected override async Task OnInitializedAsync()
     {
@@ -277,14 +286,19 @@
         {
             var s = _q.Trim();
             q = q.Where(x =>
-                (x.Name ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
-                (x.FacultyName ?? "").Contains(s, StringComparison.OrdinalIgnoreCase));
+                (x.Name ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.FacultyName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase));
         }
 
         return q.OrderByDescending(x => x.Id);
     }
 
-    private void StartEdit(Department x)
+    private bool IsEditingRow(int id)
+    {
+        return _editMode && _form.Id == id;
+    }
+
+    private async Task StartEdit(Department x)
     {
         _editMode = true;
 
@@ -296,9 +310,16 @@
         };
 
         _editContext = new EditContext(_form);
+
+        await Task.Yield();
+        await _JS.InvokeVoidAsync("blazorHelpers.scrollToElement", _formSectionRef);
+        await _nameInputRef.FocusAsync();
     }
 
-    private void CancelEdit() => ResetForm();
+    private void CancelEdit()
+    {
+        ResetForm();
+    }
 
     private async Task Save()
     {
@@ -307,8 +328,8 @@
 
         try
         {
-            var departmentName = (_form.Name ?? "").Trim();
-            var facultyName = (_form.FacultyName ?? "").Trim();
+            var departmentName = (_form.Name ?? string.Empty).Trim();
+            var facultyName = (_form.FacultyName ?? string.Empty).Trim();
 
             if (await _repo.ExistsByNameAsync(departmentName, _form.Id))
             {
@@ -358,6 +379,14 @@
 
         try
         {
+            var hasCourses = await _repo.HasCoursesAsync(id);
+
+            if (hasCourses)
+            {
+                await _JS.ToastrError("لا يمكن حذف القسم لأنه مرتبط بمواد دراسية");
+                return;
+            }
+
             await _repo.DeleteAsync(id);
             await _JS.ToastrSuccess("تم حذف القسم بنجاح");
 

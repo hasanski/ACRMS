@@ -61,5 +61,10 @@ namespace ACRMS.Repository
             }
         }
 
+        public async Task<bool> HasCoursesAsync(int id)
+        {
+            return await _context.Courses.AnyAsync(c => c.DepartmentId == id);
+        }
+
     }
 }
