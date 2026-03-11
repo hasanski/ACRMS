@@ -1,0 +1,374 @@
+﻿@page "/departments"
+@using System.ComponentModel.DataAnnotations
+@using ACRMS.Data
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@inject IDepartmentRepository _repo
+@inject IJSRuntime _JS
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>إدارة الأقسام</PageTitle>
+
+<style>
+    .wrap {
+        max-width: 1100px;
+        margin: auto;
+        padding: 16px;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .head {
+        padding: 14px 16px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(180deg,#fff 0%,#fafafa 100%);
+    }
+
+    .title {
+        margin: 0;
+        font-weight: 900;
+        font-size: 18px;
+    }
+
+    .badge-soft {
+        background: #f3f6ff;
+        border: 1px solid #dfe8ff;
+        color: #0d6efd;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .body {
+        padding: 16px;
+    }
+
+    .section {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .sec-title {
+        font-weight: 900;
+        margin: 0 0 12px 0;
+        font-size: 15px;
+        color: #222;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        align-items: end;
+    }
+
+    @@media (max-width: 900px) {
+        .grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .muted {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .table td, .table th {
+        vertical-align: middle;
+    }
+
+    .input-validation-error {
+        border: 2px solid #dc3545 !important;
+        background: #fff5f5;
+    }
+
+    .edit-banner {
+        background: #fff8e6;
+        border: 1px solid #ffe08a;
+        color: #7a5a00;
+        border-radius: 12px;
+        padding: 10px 14px;
+        margin-bottom: 14px;
+        font-weight: 700;
+    }
+
+    .empty-box {
+        text-align: center;
+        padding: 24px;
+        border: 1px dashed #d9d9d9;
+        border-radius: 14px;
+        background: #fafafa;
+        color: #666;
+        font-size: 15px;
+    }
+</style>
+
+<div class="wrap" dir="rtl">
+    <div class="card">
+        <div class="head">
+            <h3 class="title">إدارة الأقسام</h3>
+            <span class="badge-soft">إضافة / تعديل / حذف</span>
+        </div>
+
+        <div class="body">
+            @if (_editMode)
+            {
+                <div class="edit-banner">
+                    أنت الآن في وضع تعديل قسم.
+                </div>
+            }
+
+            <div class="section">
+                <div class="sec-title">@(_editMode ? "تعديل قسم" : "إضافة قسم جديد")</div>
+
+                <EditForm EditContext="_editContext" OnValidSubmit="Save">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="grid">
+                        <div>
+                            <label class="form-label">اسم القسم</label>
+                            <InputText class="form-control" @bind-Value="_form.Name" />
+                            <ValidationMessage For="@(() => _form.Name)" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">اسم الكلية</label>
+                            <InputText class="form-control" @bind-Value="_form.FacultyName" />
+                            <ValidationMessage For="@(() => _form.FacultyName)" />
+                        </div>
+
+                        <div style="grid-column: 1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @(_saving ? "جارٍ الحفظ..." : (_editMode ? "حفظ التعديل" : "إضافة"))
+                            </button>
+
+                            @if (_editMode)
+                            {
+                                <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">إلغاء</button>
+                            }
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <hr />
+
+            <div class="section">
+                <div class="sec-title">قائمة الأقسام</div>
+
+                <div class="grid" style="grid-template-columns: 1fr 180px;">
+                    <div>
+                        <label class="form-label">بحث</label>
+                        <input class="form-control" @bind="_q" @bind:event="oninput" placeholder="ابحث باسم القسم أو الكلية..." />
+                    </div>
+
+                    <div>
+                        <button class="btn btn-success w-100" @onclick="Load">تحديث</button>
+                    </div>
+                </div>
+
+                <div class="muted" style="margin-top:8px;">عدد النتائج: @Filtered().Count()</div>
+
+                @if (Filtered().Any())
+                {
+                    <div class="table-responsive" style="margin-top:10px;">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width:70px;">#</th>
+                                    <th>اسم القسم</th>
+                                    <th>اسم الكلية</th>
+                                    <th style="width:220px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var x in Filtered())
+                                {
+                                    <tr>
+                                        <td><strong>@x.Id</strong></td>
+                                        <td>@x.Name</td>
+                                        <td>@x.FacultyName</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-warning btn-sm" @onclick="() => StartEdit(x)">
+                                                تعديل
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => Delete(x.Id, x.Name)">
+                                                حذف
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-box" style="margin-top: 12px;">
+                        لا توجد أقسام مضافة حاليًا.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class DepartmentForm
+    {
+        public int? Id { get; set; }
+
+        [Required(ErrorMessage = "اسم القسم مطلوب")]
+        [MaxLength(150, ErrorMessage = "الحد الأقصى 150 حرف")]
+        public string? Name { get; set; }
+
+        [Required(ErrorMessage = "اسم الكلية مطلوب")]
+        [MaxLength(150, ErrorMessage = "الحد الأقصى 150 حرف")]
+        public string? FacultyName { get; set; }
+    }
+
+    private bool _saving = false;
+    private bool _editMode = false;
+    private string _q = "";
+
+    private List<Department> _items = new();
+    private DepartmentForm _form = new();
+    private EditContext _editContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResetForm();
+        await Load();
+    }
+
+    private void ResetForm()
+    {
+        _form = new DepartmentForm();
+        _editContext = new EditContext(_form);
+        _editMode = false;
+    }
+
+    private async Task Load()
+    {
+        _items = await _repo.ListAsync();
+        StateHasChanged();
+    }
+
+    private IEnumerable<Department> Filtered()
+    {
+        IEnumerable<Department> q = _items;
+
+        if (!string.IsNullOrWhiteSpace(_q))
+        {
+            var s = _q.Trim();
+            q = q.Where(x =>
+                (x.Name ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.FacultyName ?? "").Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return q.OrderByDescending(x => x.Id);
+    }
+
+    private void StartEdit(Department x)
+    {
+        _editMode = true;
+
+        _form = new DepartmentForm
+        {
+            Id = x.Id,
+            Name = x.Name,
+            FacultyName = x.FacultyName
+        };
+
+        _editContext = new EditContext(_form);
+    }
+
+    private void CancelEdit() => ResetForm();
+
+    private async Task Save()
+    {
+        if (_saving) return;
+        _saving = true;
+
+        try
+        {
+            var departmentName = (_form.Name ?? "").Trim();
+            var facultyName = (_form.FacultyName ?? "").Trim();
+
+            if (await _repo.ExistsByNameAsync(departmentName, _form.Id))
+            {
+                await _JS.ToastrError("اسم القسم موجود مسبقًا");
+                return;
+            }
+
+            if (_form.Id.HasValue)
+            {
+                await _repo.UpdateAsync(new Department
+                {
+                    Id = _form.Id.Value,
+                    Name = departmentName,
+                    FacultyName = facultyName
+                });
+
+                await _JS.ToastrSuccess("تم تعديل القسم بنجاح");
+            }
+            else
+            {
+                await _repo.CreateAsync(new Department
+                {
+                    Name = departmentName,
+                    FacultyName = facultyName
+                });
+
+                await _JS.ToastrSuccess("تمت إضافة القسم بنجاح");
+            }
+
+            ResetForm();
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"فشلت العملية: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task Delete(int id, string name)
+    {
+        var ok = await _JS.InvokeAsync<bool>("confirm", $"هل أنت متأكد من حذف القسم؟\n{name}");
+        if (!ok) return;
+
+        try
+        {
+            await _repo.DeleteAsync(id);
+            await _JS.ToastrSuccess("تم حذف القسم بنجاح");
+
+            if (_editMode && _form.Id == id)
+                ResetForm();
+
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"تعذر حذف القسم: {ex.Message}");
+        }
+    }
+}
