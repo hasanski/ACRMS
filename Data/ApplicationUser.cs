@@ -25,6 +25,7 @@ namespace ACRMS.Data
 
         public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
 
+
         public ICollection<Announcement> AnnouncementsCreated { get; set; } = new List<Announcement>();
         public ICollection<AnnouncementRecipient> AnnouncementRecipients { get; set; } = new List<AnnouncementRecipient>();
 
@@ -55,6 +56,7 @@ namespace ACRMS.Data
         public ICollection<MessageRead> MessageReads { get; set; } = new List<MessageRead>();
 
         public ICollection<RequestLog> RequestLogs { get; set; } = new List<RequestLog>();
+
     }
 
 }
