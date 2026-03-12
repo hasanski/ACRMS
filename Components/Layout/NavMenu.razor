@@ -2,9 +2,25 @@
 
 @inject NavigationManager NavigationManager
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">ACRMS</a>
+<style>
+    /* خلي كل رابط بالقائمة flex عشان الأيقونة + النص بنفس السطر */
+    .nav-scrollable .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px; /* مسافة بين الأيقونة والنص */
+        white-space: nowrap; /* يمنع نزول النص لسطر جديد (اختياري) */
+    }
+
+        /* توحيد حجم الأيقونات (اختياري) */
+        .nav-scrollable .nav-link .bi {
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+</style>
+
+<div class="top-row navbar navbar-dark">
+    <div class="container-fluid justify-content-center">
+        <a class="navbar-brand m-0" href="">ACRMS</a>
     </div>
 </div>
 
@@ -14,25 +30,19 @@
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> الصفحة الرئيسية
             </NavLink>
         </div>
-
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            <NavLink class="nav-link" href="admin/departments">
+                <span class="bi bi-building" aria-hidden="true"></span> الاقسام/الكليات
             </NavLink>
         </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
+        
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="auth">
-                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
+                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> صلاحيات
             </NavLink>
         </div>
 
@@ -48,7 +58,7 @@
                         <AntiforgeryToken />
                         <input type="hidden" name="ReturnUrl" value="@currentUrl" />
                         <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> تسجيل خروج
                         </button>
                     </form>
                 </div>

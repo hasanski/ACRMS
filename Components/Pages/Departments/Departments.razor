@@ -1,4 +1,4 @@
-﻿@page "/departments"
+﻿@page "/admin/departments"
 @using System.ComponentModel.DataAnnotations
 @using ACRMS.Data
 @using ACRMS.Repository.IRepository
@@ -6,6 +6,15 @@
 @inject IDepartmentRepository _repo
 @inject IJSRuntime _JS
 @attribute [Authorize(Roles = "Admin")]
+
+
+<ConfirmationModal @ref="_deleteModal"
+                   ModalId="deleteDepartmentModal"
+                   Title="تأكيد حذف القسم"
+                   Message="@_deleteMessage"
+                   ConfirmButtonText="حذف"
+                   ConfirmButtonClass="btn-danger"
+                   OnConfirm="ConfirmDeleteAsync" />
 
 <PageTitle>إدارة الأقسام</PageTitle>
 
@@ -213,7 +222,7 @@
                                             <button class="btn btn-outline-warning btn-sm" @onclick="() => StartEdit(x)">
                                                 تعديل
                                             </button>
-                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => Delete(x.Id, x.Name)">
+                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => AskDelete(x.Id, x.Name)">
                                                 حذف
                                             </button>
                                         </td>
@@ -247,6 +256,10 @@
         [MaxLength(150, ErrorMessage = "الحد الأقصى 150 حرف")]
         public string? FacultyName { get; set; }
     }
+    private ConfirmationModal? _deleteModal;
+    private int _deleteDepartmentId;
+    private string _deleteDepartmentName = string.Empty;
+    private string _deleteMessage => $"هل أنت متأكد من حذف القسم \"{_deleteDepartmentName}\"؟";
 
     private bool _saving = false;
     private bool _editMode = false;
@@ -372,14 +385,20 @@
         }
     }
 
-    private async Task Delete(int id, string name)
+    private async Task AskDelete(int id, string name)
     {
-        var ok = await _JS.InvokeAsync<bool>("confirm", $"هل أنت متأكد من حذف القسم؟\n{name}");
-        if (!ok) return;
+        _deleteDepartmentId = id;
+        _deleteDepartmentName = name;
 
+        if (_deleteModal is not null)
+            await _deleteModal.ShowAsync();
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
         try
         {
-            var hasCourses = await _repo.HasCoursesAsync(id);
+            var hasCourses = await _repo.HasCoursesAsync(_deleteDepartmentId);
 
             if (hasCourses)
             {
@@ -387,10 +406,10 @@
                 return;
             }
 
-            await _repo.DeleteAsync(id);
+            await _repo.DeleteAsync(_deleteDepartmentId);
             await _JS.ToastrSuccess("تم حذف القسم بنجاح");
 
-            if (_editMode && _form.Id == id)
+            if (_editMode && _form.Id == _deleteDepartmentId)
                 ResetForm();
 
             await Load();
@@ -400,4 +419,6 @@
             await _JS.ToastrError($"تعذر حذف القسم: {ex.Message}");
         }
     }
+
+   
 }

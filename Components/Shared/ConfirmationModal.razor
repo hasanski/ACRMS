@@ -1,0 +1,67 @@
+﻿@inject IJSRuntime JS
+
+<div class="modal fade" id="@ModalId" tabindex="-1" aria-labelledby="@($"{ModalId}_label")" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" dir="rtl">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="@($"{ModalId}_label")">@Title</h1>
+                <button type="button"
+                        class="btn-close ms-0 me-auto"
+                        data-bs-dismiss="modal"
+                        aria-label="إغلاق"></button>
+            </div>
+
+            <div class="modal-body">
+                @if (!string.IsNullOrWhiteSpace(Message))
+                {
+                    <p class="mb-3">@Message</p>
+                }
+
+                @if (ChildContent is not null)
+                {
+                    @ChildContent
+                }
+            </div>
+
+            <div class="modal-footer justify-content-start">
+                <button type="button"
+                        class="btn @ConfirmButtonClass"
+                        @onclick="ConfirmAsync">
+                    @ConfirmButtonText
+                </button>
+
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string ModalId { get; set; } = "confirmationModal";
+    [Parameter] public string Title { get; set; } = "تأكيد العملية";
+    [Parameter] public string Message { get; set; } = "هل أنت متأكد من تنفيذ العملية؟";
+    [Parameter] public string ConfirmButtonText { get; set; } = "تأكيد";
+    [Parameter] public string ConfirmButtonClass { get; set; } = "btn-danger";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    public async Task ShowAsync()
+    {
+        await JS.InvokeVoidAsync("modalHelpers.show", ModalId);
+    }
+
+    public async Task HideAsync()
+    {
+        await JS.InvokeVoidAsync("modalHelpers.hide", ModalId);
+    }
+
+    private async Task ConfirmAsync()
+    {
+        await OnConfirm.InvokeAsync();
+        await HideAsync();
+    }
+}
