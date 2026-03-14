@@ -3,15 +3,13 @@
 @inject NavigationManager NavigationManager
 
 <style>
-    /* خلي كل رابط بالقائمة flex عشان الأيقونة + النص بنفس السطر */
     .nav-scrollable .nav-link {
         display: flex;
         align-items: center;
-        gap: 10px; /* مسافة بين الأيقونة والنص */
-        white-space: nowrap; /* يمنع نزول النص لسطر جديد (اختياري) */
+        gap: 10px; 
+        white-space: nowrap; 
     }
 
-        /* توحيد حجم الأيقونات (اختياري) */
         .nav-scrollable .nav-link .bi {
             font-size: 1.1rem;
             line-height: 1;
@@ -34,13 +32,18 @@
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/departments">
+            <NavLink class="nav-link" href="/admin/departments">
                 <span class="bi bi-building" aria-hidden="true"></span> الاقسام/الكليات
             </NavLink>
         </div>
         <div class="nav-item px-3">
         <NavLink class="nav-link" href="/admin/courses">
             <span class="bi bi-journal-text"></span> المواد
+        </NavLink>
+        </div>
+        <div class="nav-item px-3">
+        <NavLink class="nav-link" href="/admin/sections">
+            <span class="bi bi-diagram-3"></span> الشعب
         </NavLink>
         </div>
 

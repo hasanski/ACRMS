@@ -1,21 +1,21 @@
-﻿@page "/admin/courses"
+﻿@page "/admin/sections"
 @using System.ComponentModel.DataAnnotations
 @using ACRMS.Data
 @using ACRMS.Repository.IRepository
 @using Microsoft.AspNetCore.Authorization
-@inject ICourseRepository _repo
+@inject ISectionRepository _repo
 @inject IJSRuntime _JS
 @attribute [Authorize(Roles = "Admin")]
 
 <ConfirmationModal @ref="_deleteModal"
-                   ModalId="deleteCourseModal"
-                   Title="تأكيد حذف المادة"
+                   ModalId="deleteSectionModal"
+                   Title="تأكيد حذف الشعبة"
                    Message="@_deleteMessage"
                    ConfirmButtonText="حذف"
                    ConfirmButtonClass="btn-danger"
                    OnConfirm="ConfirmDeleteAsync" />
 
-<PageTitle>إدارة المواد</PageTitle>
+<PageTitle>إدارة الشعب</PageTitle>
 
 <style>
     .wrap {
@@ -132,7 +132,7 @@
 <div class="wrap" dir="rtl">
     <div class="card">
         <div class="head">
-            <h3 class="title">إدارة المواد</h3>
+            <h3 class="title">إدارة الشعب</h3>
             <span class="badge-soft">إضافة / تعديل / حذف</span>
         </div>
 
@@ -140,12 +140,12 @@
             @if (_editMode)
             {
                 <div class="edit-banner">
-                    أنت الآن في وضع تعديل مادة.
+                    أنت الآن في وضع تعديل شعبة.
                 </div>
             }
 
             <div class="section">
-                <div class="sec-title">@(_editMode ? "تعديل مادة" : "إضافة مادة جديدة")</div>
+                <div class="sec-title">@(_editMode ? "تعديل شعبة" : "إضافة شعبة جديدة")</div>
 
                 <EditForm EditContext="_editContext" OnValidSubmit="Save">
                     <DataAnnotationsValidator />
@@ -153,15 +153,9 @@
 
                     <div class="grid">
                         <div>
-                            <label class="form-label">اسم المادة</label>
-                            <InputText class="form-control" @bind-Value="_form.CourseName" />
-                            <ValidationMessage For="@(() => _form.CourseName)" />
-                        </div>
-
-                        <div>
-                            <label class="form-label">رمز المادة</label>
-                            <InputText class="form-control" @bind-Value="_form.CourseCode" />
-                            <ValidationMessage For="@(() => _form.CourseCode)" />
+                            <label class="form-label">اسم الشعبة</label>
+                            <InputText class="form-control" @bind-Value="_form.SectionName" />
+                            <ValidationMessage For="@(() => _form.SectionName)" />
                         </div>
 
                         <div>
@@ -179,14 +173,27 @@
 
                         <div>
                             <label class="form-label">القسم</label>
-                            <InputSelect class="form-control" @bind-Value="_form.DepartmentId" disabled="@(!_filteredDepartments.Any())">
+                            <select class="form-control" @onchange="OnDepartmentChanged" disabled="@(!_filteredDepartments.Any())">
                                 <option value="">-- اختر القسم --</option>
                                 @foreach (var department in _filteredDepartments)
                                 {
-                                    <option value="@department.Id">@department.Name</option>
+                                    <option value="@department.Id" selected="@(department.Id == _selectedDepartmentId)">
+                                        @department.Name
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">المادة</label>
+                            <InputSelect class="form-control" @bind-Value="_form.CourseId" disabled="@(!_filteredCourses.Any())">
+                                <option value="">-- اختر المادة --</option>
+                                @foreach (var course in _filteredCourses)
+                                {
+                                    <option value="@course.Id">@course.CourseName (@course.CourseCode)</option>
                                 }
                             </InputSelect>
-                            <ValidationMessage For="@(() => _form.DepartmentId)" />
+                            <ValidationMessage For="@(() => _form.CourseId)" />
                         </div>
 
                         <div style="grid-column: 1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
@@ -208,12 +215,12 @@
             <hr />
 
             <div class="section">
-                <div class="sec-title">قائمة المواد</div>
+                <div class="sec-title">قائمة الشعب</div>
 
                 <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 180px;">
                     <div>
                         <label class="form-label">بحث</label>
-                        <input class="form-control" @bind="_q" @bind:event="oninput" placeholder="ابحث باسم المادة أو رمزها..." />
+                        <input class="form-control" @bind="_q" @bind:event="oninput" placeholder="ابحث باسم الشعبة أو المادة..." />
                     </div>
 
                     <div>
@@ -254,7 +261,8 @@
                             <thead>
                                 <tr>
                                     <th style="width:70px;">#</th>
-                                    <th>اسم المادة</th>
+                                    <th>اسم الشعبة</th>
+                                    <th>المادة</th>
                                     <th>رمز المادة</th>
                                     <th>الكلية</th>
                                     <th>القسم</th>
@@ -266,15 +274,16 @@
                                 {
                                     <tr class="@(IsEditingRow(x.Id) ? "active-row" : "")">
                                         <td><strong>@x.Id</strong></td>
-                                        <td>@x.CourseName</td>
-                                        <td>@x.CourseCode</td>
-                                        <td>@x.Department?.FacultyName</td>
-                                        <td>@x.Department?.Name</td>
+                                        <td>@x.SectionName</td>
+                                        <td>@x.Course?.CourseName</td>
+                                        <td>@x.Course?.CourseCode</td>
+                                        <td>@x.Course?.Department?.FacultyName</td>
+                                        <td>@x.Course?.Department?.Name</td>
                                         <td class="text-end">
                                             <button class="btn btn-outline-warning btn-sm" @onclick="async () => await StartEdit(x)">
                                                 تعديل
                                             </button>
-                                            <button class="btn btn-outline-danger btn-sm" @onclick="async () => await AskDelete(x.Id, x.CourseName)">
+                                            <button class="btn btn-outline-danger btn-sm" @onclick="async () => await AskDelete(x.Id, x.SectionName)">
                                                 حذف
                                             </button>
                                         </td>
@@ -287,7 +296,7 @@
                 else
                 {
                     <div class="empty-box" style="margin-top: 12px;">
-                        لا توجد مواد مضافة حاليًا.
+                        لا توجد شعب مضافة حاليًا.
                     </div>
                 }
             </div>
@@ -296,44 +305,44 @@
 </div>
 
 @code {
-    private class CourseForm
+    private class SectionForm
     {
         public int? Id { get; set; }
 
-        [Required(ErrorMessage = "اسم المادة مطلوب")]
-        [MaxLength(200, ErrorMessage = "الحد الأقصى 200 حرف")]
-        public string? CourseName { get; set; }
+        [Required(ErrorMessage = "اسم الشعبة مطلوب")]
+        [MaxLength(100, ErrorMessage = "الحد الأقصى 100 حرف")]
+        public string? SectionName { get; set; }
 
-        [Required(ErrorMessage = "رمز المادة مطلوب")]
-        [MaxLength(50, ErrorMessage = "الحد الأقصى 50 حرف")]
-        public string? CourseCode { get; set; }
-
-        [Required(ErrorMessage = "القسم مطلوب")]
-        [Range(1, int.MaxValue, ErrorMessage = "اختر القسم")]
-        public int? DepartmentId { get; set; }
+        [Required(ErrorMessage = "المادة مطلوبة")]
+        [Range(1, int.MaxValue, ErrorMessage = "اختر المادة")]
+        public int? CourseId { get; set; }
     }
 
     private ConfirmationModal? _deleteModal;
-    private int _deleteCourseId;
-    private string _deleteCourseName = string.Empty;
-    private string _deleteMessage => $"هل أنت متأكد من حذف المادة \"{_deleteCourseName}\"؟";
+    private int _deleteSectionId;
+    private string _deleteSectionName = string.Empty;
+    private string _deleteMessage => $"هل أنت متأكد من حذف الشعبة \"{_deleteSectionName}\"؟";
 
     private bool _saving = false;
     private bool _editMode = false;
     private string _q = string.Empty;
 
-    private List<Course> _items = new();
+    private List<Section> _items = new();
     private List<Department> _departments = new();
-    private List<Department> _filteredDepartments = new();
+    private List<Course> _courses = new();
+
     private List<string> _faculties = new();
+    private List<Department> _filteredDepartments = new();
+    private List<Course> _filteredCourses = new();
 
     private string _selectedFacultyName = string.Empty;
+    private int? _selectedDepartmentId = null;
 
     private string _tableFacultyFilter = string.Empty;
     private int? _tableDepartmentFilter = null;
     private List<Department> _tableFilteredDepartments = new();
 
-    private CourseForm _form = new();
+    private SectionForm _form = new();
     private EditContext _editContext = default!;
 
     protected override async Task OnInitializedAsync()
@@ -344,17 +353,20 @@
 
     private void ResetForm()
     {
-        _form = new CourseForm();
+        _form = new SectionForm();
         _editContext = new EditContext(_form);
         _editMode = false;
         _selectedFacultyName = string.Empty;
-        _filteredDepartments = new List<Department>();
+        _selectedDepartmentId = null;
+        _filteredDepartments = new();
+        _filteredCourses = new();
     }
 
     private async Task Load()
     {
         _items = await _repo.ListAsync();
         _departments = await _repo.GetDepartmentsAsync();
+        _courses = await _repo.GetCoursesAsync();
 
         _faculties = _departments
             .Where(d => !string.IsNullOrWhiteSpace(d.FacultyName))
@@ -364,6 +376,7 @@
             .ToList();
 
         ApplyDepartmentFilter();
+        ApplyCourseFilter();
         ApplyTableDepartmentFilter();
 
         StateHasChanged();
@@ -373,8 +386,8 @@
     {
         if (string.IsNullOrWhiteSpace(_selectedFacultyName))
         {
-            _filteredDepartments = new List<Department>();
-            _form.DepartmentId = null;
+            _filteredDepartments = new();
+            _selectedDepartmentId = null;
             return;
         }
 
@@ -383,17 +396,33 @@
             .OrderBy(d => d.Name)
             .ToList();
 
-        if (_form.DepartmentId.HasValue && !_filteredDepartments.Any(d => d.Id == _form.DepartmentId.Value))
+        if (_selectedDepartmentId.HasValue && !_filteredDepartments.Any(d => d.Id == _selectedDepartmentId.Value))
+            _selectedDepartmentId = null;
+    }
+
+    private void ApplyCourseFilter()
+    {
+        if (!_selectedDepartmentId.HasValue)
         {
-            _form.DepartmentId = null;
+            _filteredCourses = new();
+            _form.CourseId = null;
+            return;
         }
+
+        _filteredCourses = _courses
+            .Where(c => c.DepartmentId == _selectedDepartmentId.Value)
+            .OrderBy(c => c.CourseName)
+            .ToList();
+
+        if (_form.CourseId.HasValue && !_filteredCourses.Any(c => c.Id == _form.CourseId.Value))
+            _form.CourseId = null;
     }
 
     private void ApplyTableDepartmentFilter()
     {
         if (string.IsNullOrWhiteSpace(_tableFacultyFilter))
         {
-            _tableFilteredDepartments = new List<Department>();
+            _tableFilteredDepartments = new();
             _tableDepartmentFilter = null;
             return;
         }
@@ -404,16 +433,28 @@
             .ToList();
 
         if (_tableDepartmentFilter.HasValue && !_tableFilteredDepartments.Any(d => d.Id == _tableDepartmentFilter.Value))
-        {
             _tableDepartmentFilter = null;
-        }
     }
 
     private Task OnFacultyChanged(ChangeEventArgs e)
     {
         _selectedFacultyName = e.Value?.ToString() ?? string.Empty;
-        _form.DepartmentId = null;
+        _selectedDepartmentId = null;
+        _form.CourseId = null;
         ApplyDepartmentFilter();
+        ApplyCourseFilter();
+        return Task.CompletedTask;
+    }
+
+    private Task OnDepartmentChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+            _selectedDepartmentId = id;
+        else
+            _selectedDepartmentId = null;
+
+        _form.CourseId = null;
+        ApplyCourseFilter();
         return Task.CompletedTask;
     }
 
@@ -425,60 +466,57 @@
         return Task.CompletedTask;
     }
 
-    private IEnumerable<Course> Filtered()
+    private IEnumerable<Section> Filtered()
     {
-        IEnumerable<Course> q = _items;
+        IEnumerable<Section> q = _items;
 
         if (!string.IsNullOrWhiteSpace(_q))
         {
             var s = _q.Trim();
             q = q.Where(x =>
-                (x.CourseName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
-                (x.CourseCode ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase));
+                (x.SectionName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.Course?.CourseName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.Course?.CourseCode ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(_tableFacultyFilter))
         {
-            q = q.Where(x => x.Department != null && x.Department.FacultyName == _tableFacultyFilter);
+            q = q.Where(x => x.Course?.Department?.FacultyName == _tableFacultyFilter);
         }
 
         if (_tableDepartmentFilter.HasValue)
         {
-            q = q.Where(x => x.DepartmentId == _tableDepartmentFilter.Value);
+            q = q.Where(x => x.Course?.DepartmentId == _tableDepartmentFilter.Value);
         }
 
         return q.OrderByDescending(x => x.Id);
     }
 
-    private bool IsEditingRow(int id)
-    {
-        return _editMode && _form.Id == id;
-    }
+    private bool IsEditingRow(int id) => _editMode && _form.Id == id;
 
-    private Task StartEdit(Course x)
+    private Task StartEdit(Section x)
     {
         _editMode = true;
 
-        _selectedFacultyName = x.Department?.FacultyName ?? string.Empty;
+        _selectedFacultyName = x.Course?.Department?.FacultyName ?? string.Empty;
+        _selectedDepartmentId = x.Course?.DepartmentId;
 
-        _form = new CourseForm
+        _form = new SectionForm
         {
             Id = x.Id,
-            CourseName = x.CourseName,
-            CourseCode = x.CourseCode,
-            DepartmentId = x.DepartmentId
+            SectionName = x.SectionName,
+            CourseId = x.CourseId
         };
 
         _editContext = new EditContext(_form);
+
         ApplyDepartmentFilter();
+        ApplyCourseFilter();
 
         return Task.CompletedTask;
     }
 
-    private void CancelEdit()
-    {
-        ResetForm();
-    }
+    private void CancelEdit() => ResetForm();
 
     private async Task Save()
     {
@@ -487,37 +525,34 @@
 
         try
         {
-            var courseName = (_form.CourseName ?? string.Empty).Trim();
-            var courseCode = (_form.CourseCode ?? string.Empty).Trim().ToUpper();
+            var sectionName = (_form.SectionName ?? string.Empty).Trim();
 
-            if (await _repo.ExistsByCodeAsync(courseCode, _form.Id))
+            if (await _repo.ExistsByNameInCourseAsync(sectionName, _form.CourseId!.Value, _form.Id))
             {
-                await _JS.ToastrError("رمز المادة موجود مسبقًا");
+                await _JS.ToastrError("اسم الشعبة موجود مسبقًا ضمن نفس المادة");
                 return;
             }
 
             if (_form.Id.HasValue)
             {
-                await _repo.UpdateAsync(new Course
+                await _repo.UpdateAsync(new Section
                 {
                     Id = _form.Id.Value,
-                    CourseName = courseName,
-                    CourseCode = courseCode,
-                    DepartmentId = _form.DepartmentId!.Value
+                    SectionName = sectionName,
+                    CourseId = _form.CourseId.Value
                 });
 
-                await _JS.ToastrSuccess("تم تعديل المادة بنجاح");
+                await _JS.ToastrSuccess("تم تعديل الشعبة بنجاح");
             }
             else
             {
-                await _repo.CreateAsync(new Course
+                await _repo.CreateAsync(new Section
                 {
-                    CourseName = courseName,
-                    CourseCode = courseCode,
-                    DepartmentId = _form.DepartmentId!.Value
+                    SectionName = sectionName,
+                    CourseId = _form.CourseId.Value
                 });
 
-                await _JS.ToastrSuccess("تمت إضافة المادة بنجاح");
+                await _JS.ToastrSuccess("تمت إضافة الشعبة بنجاح");
             }
 
             ResetForm();
@@ -535,8 +570,8 @@
 
     private async Task AskDelete(int id, string name)
     {
-        _deleteCourseId = id;
-        _deleteCourseName = name;
+        _deleteSectionId = id;
+        _deleteSectionName = name;
 
         if (_deleteModal is not null)
             await _deleteModal.ShowAsync();
@@ -546,25 +581,25 @@
     {
         try
         {
-            var hasDependencies = await _repo.HasDependenciesAsync(_deleteCourseId);
+            var hasDependencies = await _repo.HasDependenciesAsync(_deleteSectionId);
 
             if (hasDependencies)
             {
-                await _JS.ToastrError("لا يمكن حذف المادة لأنها مرتبطة ببيانات أخرى");
+                await _JS.ToastrError("لا يمكن حذف الشعبة لأنها مرتبطة ببيانات أخرى");
                 return;
             }
 
-            await _repo.DeleteAsync(_deleteCourseId);
-            await _JS.ToastrSuccess("تم حذف المادة بنجاح");
+            await _repo.DeleteAsync(_deleteSectionId);
+            await _JS.ToastrSuccess("تم حذف الشعبة بنجاح");
 
-            if (_editMode && _form.Id == _deleteCourseId)
+            if (_editMode && _form.Id == _deleteSectionId)
                 ResetForm();
 
             await Load();
         }
         catch (Exception ex)
         {
-            await _JS.ToastrError($"تعذر حذف المادة: {ex.Message}");
+            await _JS.ToastrError($"تعذر حذف الشعبة: {ex.Message}");
         }
     }
 }
