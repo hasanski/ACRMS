@@ -26,7 +26,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 
 // Add Repository services
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
-
+builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
