@@ -1,0 +1,443 @@
+﻿@page "/admin/users"
+@using System.ComponentModel.DataAnnotations
+@using ACRMS.Data
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@inject IUserManagementRepository _repo
+@inject IJSRuntime _JS
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>إدارة المستخدمين</PageTitle>
+
+<style>
+    .wrap {
+        max-width: 1200px;
+        margin: auto;
+        padding: 16px;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .head {
+        padding: 14px 16px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(180deg,#fff 0%,#fafafa 100%);
+    }
+
+    .title {
+        margin: 0;
+        font-weight: 900;
+        font-size: 18px;
+    }
+
+    .badge-soft {
+        background: #f3f6ff;
+        border: 1px solid #dfe8ff;
+        color: #0d6efd;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .body {
+        padding: 16px;
+    }
+
+    .section {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .sec-title {
+        font-weight: 900;
+        margin: 0 0 12px 0;
+        font-size: 15px;
+        color: #222;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        align-items: end;
+    }
+
+    @@media (max-width: 900px) {
+        .grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .table td, .table th {
+        vertical-align: middle;
+    }
+
+    .muted {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .pill {
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        border: 1px solid #eee;
+        display: inline-block;
+    }
+
+    .pill-on {
+        background: #eafff2;
+        border-color: #bfe6cc;
+        color: #198754;
+    }
+
+    .pill-off {
+        background: #f6f6f6;
+        border-color: #eee;
+        color: #666;
+    }
+</style>
+
+<div class="wrap" dir="rtl">
+    <div class="card">
+        <div class="head">
+            <h3 class="title">إدارة المستخدمين</h3>
+            <span class="badge-soft">إضافة / عرض / تفعيل / تعطيل</span>
+        </div>
+
+        <div class="body">
+            <div class="section">
+                <div class="sec-title">إضافة مستخدم جديد</div>
+
+                <EditForm EditContext="_editContext" OnValidSubmit="Save">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="grid">
+                        <div>
+                            <label class="form-label">الاسم الكامل</label>
+                            <InputText class="form-control" @bind-Value="_form.FullName" />
+                            <ValidationMessage For="@(() => _form.FullName)" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">البريد الإلكتروني</label>
+                            <InputText class="form-control" @bind-Value="_form.Email" />
+                            <ValidationMessage For="@(() => _form.Email)" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">الرقم الجامعي</label>
+                            <InputText class="form-control" @bind-Value="_form.UniversityNumber" />
+                            <ValidationMessage For="@(() => _form.UniversityNumber)" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">القسم</label>
+                            <InputSelect class="form-control" @bind-Value="_form.DepartmentId">
+                                <option value="">-- اختر القسم --</option>
+                                @foreach (var department in _departments)
+                                {
+                                    <option value="@department.Id">@department.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="form-label">الدور</label>
+                            <InputSelect class="form-control" @bind-Value="_form.Role">
+                                <option value="">-- اختر الدور --</option>
+                                @foreach (var role in _roles)
+                                {
+                                    <option value="@role">@role</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => _form.Role)" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">كلمة المرور</label>
+                            <InputText type="password" class="form-control" @bind-Value="_form.Password" />
+                            <ValidationMessage For="@(() => _form.Password)" />
+                        </div>
+
+                        <div style="grid-column: 1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @(_saving ? "جارٍ الحفظ..." : "إضافة")
+                            </button>
+
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm">
+                                مسح النموذج
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <hr />
+
+            <div class="section">
+                <div class="sec-title">قائمة المستخدمين</div>
+
+                <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 180px;">
+                    <div>
+                        <label class="form-label">بحث</label>
+                        <input class="form-control" @bind="_q" @bind:event="oninput" placeholder="ابحث بالاسم أو البريد أو الرقم الجامعي..." />
+                    </div>
+
+                    <div>
+                        <label class="form-label">فلترة حسب الدور</label>
+                        <InputSelect class="form-control" @bind-Value="_roleFilter">
+                            <option value="">الكل</option>
+                            @foreach (var role in _roles)
+                            {
+                                <option value="@role">@role</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div>
+                        <label class="form-label">فلترة حسب القسم</label>
+                        <InputSelect class="form-control" @bind-Value="_departmentFilter">
+                            <option value="">الكل</option>
+                            @foreach (var department in _departments)
+                            {
+                                <option value="@department.Id">@department.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div>
+                        <button class="btn btn-success w-100" @onclick="Load">تحديث</button>
+                    </div>
+                </div>
+
+                <div class="muted" style="margin-top:8px;">عدد النتائج: @Filtered().Count()</div>
+
+                @if (Filtered().Any())
+                {
+                    <div class="table-responsive" style="margin-top:10px;">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الاسم</th>
+                                    <th>البريد</th>
+                                    <th>الرقم الجامعي</th>
+                                    <th>القسم</th>
+                                    <th>الدور</th>
+                                    <th>الحالة</th>
+                                    <th style="width:160px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Filtered())
+                                {
+                                    <tr>
+                                        <td>@item.FullName</td>
+                                        <td>@item.Email</td>
+                                        <td>@item.UniversityNumber</td>
+                                        <td>@item.Department?.Name</td>
+                                        <td>@GetRole(item.Id)</td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="pill pill-on">مفعّل</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="pill pill-off">معطّل</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-secondary btn-sm" @onclick="async () => await ToggleActive(item.Id)">
+                                                @(item.IsActive ? "تعطيل" : "تفعيل")
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="muted" style="margin-top:15px;">لا توجد بيانات لعرضها.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class UserForm
+    {
+        [Required(ErrorMessage = "الاسم الكامل مطلوب")]
+        public string? FullName { get; set; }
+
+        [Required(ErrorMessage = "البريد الإلكتروني مطلوب")]
+        [EmailAddress(ErrorMessage = "صيغة البريد الإلكتروني غير صحيحة")]
+        public string? Email { get; set; }
+
+        [Required(ErrorMessage = "الرقم الجامعي مطلوب")]
+        public string? UniversityNumber { get; set; }
+
+        public int? DepartmentId { get; set; }
+
+        [Required(ErrorMessage = "الدور مطلوب")]
+        public string? Role { get; set; }
+
+        [Required(ErrorMessage = "كلمة المرور مطلوبة")]
+        [MinLength(6, ErrorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل")]
+        public string? Password { get; set; }
+    }
+
+    private UserForm _form = new();
+    private EditContext _editContext = default!;
+    private bool _saving = false;
+
+    private List<ApplicationUser> _users = new();
+    private List<Department> _departments = new();
+    private List<string> _roles = new();
+    private Dictionary<string, string?> _userRoles = new();
+
+    private string _q = string.Empty;
+    private string _roleFilter = string.Empty;
+    private int? _departmentFilter = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResetForm();
+        await Load();
+    }
+
+    private void ResetForm()
+    {
+        _form = new UserForm();
+        _editContext = new EditContext(_form);
+    }
+
+    private async Task Load()
+    {
+        _users = await _repo.ListUsersAsync();
+        _departments = await _repo.GetDepartmentsAsync();
+        _roles = await _repo.GetRolesAsync();
+
+        _userRoles = new Dictionary<string, string?>();
+        foreach (var user in _users)
+        {
+            _userRoles[user.Id] = await _repo.GetUserRoleAsync(user.Id);
+        }
+
+        StateHasChanged();
+    }
+
+    private IEnumerable<ApplicationUser> Filtered()
+    {
+        IEnumerable<ApplicationUser> q = _users;
+
+        if (!string.IsNullOrWhiteSpace(_q))
+        {
+            var s = _q.Trim();
+            q = q.Where(x =>
+                (x.FullName ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.Email ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.UniversityNumber ?? "").Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_roleFilter))
+        {
+            q = q.Where(x => GetRole(x.Id) == _roleFilter);
+        }
+
+        if (_departmentFilter.HasValue)
+        {
+            q = q.Where(x => x.DepartmentId == _departmentFilter.Value);
+        }
+
+        return q.OrderByDescending(x => x.CreatedAt);
+    }
+
+    private string? GetRole(string userId)
+    {
+        return _userRoles.TryGetValue(userId, out var role) ? role : null;
+    }
+
+    private async Task Save()
+    {
+        if (_saving) return;
+        _saving = true;
+
+        try
+        {
+            var email = (_form.Email ?? string.Empty).Trim();
+            var universityNumber = (_form.UniversityNumber ?? string.Empty).Trim();
+
+            if (await _repo.EmailExistsAsync(email))
+            {
+                await _JS.ToastrError("البريد الإلكتروني مستخدم مسبقًا");
+                return;
+            }
+
+            if (await _repo.UniversityNumberExistsAsync(universityNumber))
+            {
+                await _JS.ToastrError("الرقم الجامعي مستخدم مسبقًا");
+                return;
+            }
+
+            var result = await _repo.CreateUserAsync(
+                _form.FullName ?? string.Empty,
+                email,
+                universityNumber,
+                _form.DepartmentId,
+                _form.Role ?? string.Empty,
+                _form.Password ?? string.Empty);
+
+            if (!result.Succeeded)
+            {
+                await _JS.ToastrError(result.ErrorMessage);
+                return;
+            }
+
+            await _JS.ToastrSuccess("تمت إضافة المستخدم بنجاح");
+            ResetForm();
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"فشلت العملية: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task ToggleActive(string userId)
+    {
+        var result = await _repo.ToggleActiveAsync(userId);
+
+        if (!result.Succeeded)
+        {
+            await _JS.ToastrError(result.ErrorMessage);
+            return;
+        }
+
+        await _JS.ToastrSuccess("تم تحديث حالة المستخدم");
+        await Load();
+    }
+}

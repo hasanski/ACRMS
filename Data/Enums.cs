@@ -2,19 +2,28 @@
 {
     public class Enums
     {
+        //public enum AnnouncementTargetType
+        //{
+        //    AllStudents = 1,
+        //    Course = 2,
+        //    Section = 3,
+        //    SingleStudent = 4
+        //}
         public enum AnnouncementTargetType
         {
             AllStudents = 1,
-            Course = 2,
-            Section = 3,
-            SingleStudent = 4
+            ByDepartment = 2,
+            ByCourse = 3,
+            BySection = 4,
+            IndividualStudent = 5
         }
 
         public enum AnnouncementPriority
         {
             Low = 1,
             Normal = 2,
-            High = 3
+            High = 3,
+            Urgent = 4
         }
 
         public enum NotificationType
@@ -38,7 +47,8 @@
         public enum MeetingType
         {
             InPerson = 1,
-            Online = 2
+            Online = 2,
+            PhoneCall = 3
         }
 
         public enum InquiryStatus

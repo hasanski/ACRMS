@@ -1,0 +1,701 @@
+﻿@page "/announcements"
+@using System.ComponentModel.DataAnnotations
+@using ACRMS.Data
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@using static ACRMS.Data.Enums
+@inject IAnnouncementRepository _repo
+@inject IUserManagementRepository _userRepo
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime _JS
+@attribute [Authorize(Roles = "Admin,Faculty")]
+
+<ConfirmationModal @ref="_deleteModal"
+                   ModalId="deleteAnnouncementModal"
+                   Title="تأكيد حذف التعميم"
+                   Message="@_deleteMessage"
+                   ConfirmButtonText="حذف"
+                   ConfirmButtonClass="btn-danger"
+                   OnConfirm="ConfirmDeleteAsync" />
+
+<PageTitle>إدارة التعميمات</PageTitle>
+
+<style>
+    .wrap {
+        max-width: 1250px;
+        margin: auto;
+        padding: 16px;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .head {
+        padding: 14px 16px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(180deg,#fff 0%,#fafafa 100%);
+    }
+
+    .title {
+        margin: 0;
+        font-weight: 900;
+        font-size: 18px;
+    }
+
+    .badge-soft {
+        background: #f3f6ff;
+        border: 1px solid #dfe8ff;
+        color: #0d6efd;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .body {
+        padding: 16px;
+    }
+
+    .section {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .sec-title {
+        font-weight: 900;
+        margin: 0 0 12px 0;
+        font-size: 15px;
+        color: #222;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        align-items: end;
+    }
+
+    @@media (max-width: 900px) {
+        .grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .table td, .table th {
+        vertical-align: middle;
+    }
+
+    .muted {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .pill {
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        border: 1px solid #eee;
+        display: inline-block;
+    }
+
+    .pill-high {
+        background: #fff3cd;
+        border-color: #ffe69c;
+        color: #856404;
+    }
+
+    .pill-urgent {
+        background: #f8d7da;
+        border-color: #f1aeb5;
+        color: #842029;
+    }
+
+    .pill-normal {
+        background: #e7f1ff;
+        border-color: #b6d4fe;
+        color: #084298;
+    }
+
+    .empty-box {
+        text-align: center;
+        padding: 24px;
+        border: 1px dashed #d9d9d9;
+        border-radius: 14px;
+        background: #fafafa;
+        color: #666;
+        font-size: 15px;
+    }
+</style>
+
+<div class="wrap" dir="rtl">
+    <div class="card">
+        <div class="head">
+            <h3 class="title">إدارة التعميمات</h3>
+            <span class="badge-soft">إنشاء / عرض / حذف</span>
+        </div>
+
+        <div class="body">
+            <div class="section">
+                <div class="sec-title">إنشاء تعميم جديد</div>
+
+                <EditForm EditContext="_editContext" OnValidSubmit="Save">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="grid">
+                        <div>
+                            <label class="form-label">عنوان التعميم</label>
+                            <InputText class="form-control" @bind-Value="_form.Title" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">الأولوية</label>
+                            <InputSelect class="form-control" @bind-Value="_form.Priority">
+                                @foreach (var p in Enum.GetValues<AnnouncementPriority>())
+                                {
+                                    <option value="@p">@GetPriorityText(p)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div style="grid-column:1 / -1;">
+                            <label class="form-label">محتوى التعميم</label>
+                            <InputTextArea class="form-control" @bind-Value="_form.Content" rows="4" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">نوع الاستهداف</label>
+                            <InputSelect class="form-control" @bind-Value="_form.TargetType" @onchange="OnTargetTypeChanged">
+                                @foreach (var t in Enum.GetValues<AnnouncementTargetType>())
+                                {
+                                    <option value="@t">@GetTargetTypeText(t)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        @if (_form.TargetType == AnnouncementTargetType.ByDepartment || _form.TargetType == AnnouncementTargetType.ByCourse || _form.TargetType == AnnouncementTargetType.BySection)
+                        {
+                            <div>
+                                <label class="form-label">الكلية</label>
+                                <select class="form-control" @onchange="OnFacultyChanged">
+                                    <option value="">-- اختر الكلية --</option>
+                                    @foreach (var faculty in _faculties)
+                                    {
+                                        <option value="@faculty" selected="@(faculty == _selectedFacultyName)">@faculty</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="form-label">القسم</label>
+                                <select class="form-control" @onchange="OnDepartmentChanged" disabled="@(!_filteredDepartments.Any())">
+                                    <option value="">-- اختر القسم --</option>
+                                    @foreach (var department in _filteredDepartments)
+                                    {
+                                        <option value="@department.Id" selected="@(department.Id == _selectedDepartmentId)">@department.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        @if (_form.TargetType == AnnouncementTargetType.ByCourse || _form.TargetType == AnnouncementTargetType.BySection)
+                        {
+                            <div>
+                                <label class="form-label">المادة</label>
+                                <select class="form-control" @onchange="OnCourseChanged" disabled="@(!_filteredCourses.Any())">
+                                    <option value="">-- اختر المادة --</option>
+                                    @foreach (var course in _filteredCourses)
+                                    {
+                                        <option value="@course.Id" selected="@(course.Id == _selectedCourseId)">
+                                            @course.CourseName (@course.CourseCode)
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        @if (_form.TargetType == AnnouncementTargetType.BySection)
+                        {
+                            <div>
+                                <label class="form-label">الشعبة</label>
+                                <InputSelect class="form-control" @bind-Value="_form.SectionId" disabled="@(!_filteredSections.Any())">
+                                    <option value="">-- اختر الشعبة --</option>
+                                    @foreach (var sec in _filteredSections)
+                                    {
+                                        <option value="@sec.Id">@sec.SectionName</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+
+                        @if (_form.TargetType == AnnouncementTargetType.IndividualStudent)
+                        {
+                            <div>
+                                <label class="form-label">الطالب</label>
+                                <InputSelect class="form-control" @bind-Value="_form.TargetStudentId">
+                                    <option value="">-- اختر الطالب --</option>
+                                    @foreach (var student in _students)
+                                    {
+                                        <option value="@student.Id">@student.FullName (@student.UniversityNumber)</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+
+                        <div>
+                            <label class="form-label">تاريخ الانتهاء (اختياري)</label>
+                            <InputDate class="form-control" @bind-Value="_form.ExpireAt" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">مهم؟</label><br />
+                            <InputCheckbox class="form-check-input" @bind-Value="_form.IsImportant" />
+                            <span class="ms-2">نعم</span>
+                        </div>
+
+                        <div style="grid-column: 1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @(_saving ? "جارٍ الحفظ..." : "نشر التعميم")
+                            </button>
+
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm">
+                                مسح النموذج
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <hr />
+
+            <div class="section">
+                <div class="sec-title">قائمة التعميمات</div>
+
+                <div class="grid" style="grid-template-columns: 1fr 220px 180px;">
+                    <div>
+                        <label class="form-label">بحث</label>
+                        <input class="form-control" @bind="_q" @bind:event="oninput" placeholder="ابحث بعنوان التعميم..." />
+                    </div>
+
+                    <div>
+                        <label class="form-label">نوع الاستهداف</label>
+                        <InputSelect class="form-control" @bind-Value="_targetFilter">
+                            <option value="">الكل</option>
+                            @foreach (var t in Enum.GetValues<AnnouncementTargetType>())
+                            {
+                                <option value="@t">@GetTargetTypeText(t)</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div>
+                        <button class="btn btn-success w-100" @onclick="Load">تحديث</button>
+                    </div>
+                </div>
+
+                <div class="muted" style="margin-top:8px;">عدد النتائج: @Filtered().Count()</div>
+
+                @if (Filtered().Any())
+                {
+                    <div class="table-responsive" style="margin-top:10px;">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>العنوان</th>
+                                    <th>الاستهداف</th>
+                                    <th>الأولوية</th>
+                                    <th>الناشر</th>
+                                    <th>التاريخ</th>
+                                    <th style="width:120px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Filtered())
+                                {
+                                    var title = item.Title;
+
+                                    <tr>
+                                        <td>@item.Title</td>
+                                        <td>@DescribeTarget(item)</td>
+                                        <td>
+                                            <span class="pill @GetPriorityClass(item.Priority)">
+                                                @GetPriorityText(item.Priority)
+                                            </span>
+                                        </td>
+                                        <td>@item.Faculty?.FullName</td>
+                                        <td>@item.PublishedAt.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-danger btn-sm"
+                                                    @onclick="@(async () => await AskDelete(item.Id, title))">
+                                                حذف
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-box" style="margin-top: 12px;">
+                        لا توجد تعميمات مضافة حاليًا.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class AnnouncementForm
+    {
+        [Required(ErrorMessage = "عنوان التعميم مطلوب")]
+        public string? Title { get; set; }
+
+        [Required(ErrorMessage = "محتوى التعميم مطلوب")]
+        public string? Content { get; set; }
+
+        public AnnouncementTargetType TargetType { get; set; } = AnnouncementTargetType.AllStudents;
+        public AnnouncementPriority Priority { get; set; } = AnnouncementPriority.Normal;
+
+        public int? CourseId { get; set; }
+        public int? SectionId { get; set; }
+        public string? TargetStudentId { get; set; }
+
+        public DateTime? ExpireAt { get; set; }
+        public bool IsImportant { get; set; } = false;
+    }
+
+    private ConfirmationModal? _deleteModal;
+    private int _deleteAnnouncementId;
+    private string _deleteAnnouncementTitle = string.Empty;
+    private string _deleteMessage => $"هل أنت متأكد من حذف التعميم \"{_deleteAnnouncementTitle}\"؟";
+
+    private bool _saving = false;
+    private string _q = string.Empty;
+    private string _targetFilter = string.Empty;
+
+    private List<Announcement> _items = new();
+    private List<Department> _departments = new();
+    private List<Course> _courses = new();
+    private List<Section> _sections = new();
+    private List<ApplicationUser> _students = new();
+    private List<string> _faculties = new();
+
+    private List<Department> _filteredDepartments = new();
+    private List<Course> _filteredCourses = new();
+    private List<Section> _filteredSections = new();
+
+    private string _selectedFacultyName = string.Empty;
+    private int? _selectedDepartmentId = null;
+    private int? _selectedCourseId = null;
+
+    private AnnouncementForm _form = new();
+    private EditContext _editContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResetForm();
+        await Load();
+    }
+
+    private void ResetForm()
+    {
+        _form = new AnnouncementForm();
+        _editContext = new EditContext(_form);
+
+        _selectedFacultyName = string.Empty;
+        _selectedDepartmentId = null;
+        _selectedCourseId = null;
+        _filteredDepartments = new();
+        _filteredCourses = new();
+        _filteredSections = new();
+    }
+
+    private async Task Load()
+    {
+        _items = await _repo.ListAsync();
+        _departments = await _repo.GetDepartmentsAsync();
+        _courses = await _repo.GetCoursesAsync();
+        _sections = await _repo.GetSectionsAsync();
+        _students = await _repo.GetStudentsAsync();
+
+        _faculties = _departments
+            .Where(d => !string.IsNullOrWhiteSpace(d.FacultyName))
+            .Select(d => d.FacultyName!.Trim())
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        ApplyDepartmentFilter();
+        ApplyCourseFilter();
+        ApplySectionFilter();
+
+        StateHasChanged();
+    }
+
+    private void ApplyDepartmentFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedFacultyName))
+        {
+            _filteredDepartments = new();
+            _selectedDepartmentId = null;
+            return;
+        }
+
+        _filteredDepartments = _departments
+            .Where(d => d.FacultyName == _selectedFacultyName)
+            .OrderBy(d => d.Name)
+            .ToList();
+
+        if (_selectedDepartmentId.HasValue && !_filteredDepartments.Any(d => d.Id == _selectedDepartmentId.Value))
+            _selectedDepartmentId = null;
+    }
+
+    private void ApplyCourseFilter()
+    {
+        if (!_selectedDepartmentId.HasValue)
+        {
+            _filteredCourses = new();
+            _selectedCourseId = null;
+            _form.CourseId = null;
+            return;
+        }
+
+        _filteredCourses = _courses
+            .Where(c => c.DepartmentId == _selectedDepartmentId.Value)
+            .OrderBy(c => c.CourseName)
+            .ToList();
+
+        if (_selectedCourseId.HasValue && !_filteredCourses.Any(c => c.Id == _selectedCourseId.Value))
+            _selectedCourseId = null;
+
+        if (_form.CourseId.HasValue && !_filteredCourses.Any(c => c.Id == _form.CourseId.Value))
+            _form.CourseId = null;
+    }
+
+    private void ApplySectionFilter()
+    {
+        if (!_selectedCourseId.HasValue)
+        {
+            _filteredSections = new();
+            _form.SectionId = null;
+            return;
+        }
+
+        _filteredSections = _sections
+            .Where(s => s.CourseId == _selectedCourseId.Value)
+            .OrderBy(s => s.SectionName)
+            .ToList();
+
+        if (_form.SectionId.HasValue && !_filteredSections.Any(s => s.Id == _form.SectionId.Value))
+            _form.SectionId = null;
+    }
+
+    private Task OnTargetTypeChanged(ChangeEventArgs e)
+    {
+        _form.SectionId = null;
+        _form.CourseId = null;
+        _form.TargetStudentId = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OnFacultyChanged(ChangeEventArgs e)
+    {
+        _selectedFacultyName = e.Value?.ToString() ?? string.Empty;
+        _selectedDepartmentId = null;
+        _selectedCourseId = null;
+        _form.CourseId = null;
+        _form.SectionId = null;
+
+        ApplyDepartmentFilter();
+        ApplyCourseFilter();
+        ApplySectionFilter();
+        return Task.CompletedTask;
+    }
+
+    private Task OnDepartmentChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+            _selectedDepartmentId = id;
+        else
+            _selectedDepartmentId = null;
+
+        _selectedCourseId = null;
+        _form.CourseId = null;
+        _form.SectionId = null;
+
+        ApplyCourseFilter();
+        ApplySectionFilter();
+        return Task.CompletedTask;
+    }
+
+    private Task OnCourseChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            _selectedCourseId = id;
+            _form.CourseId = id;
+        }
+        else
+        {
+            _selectedCourseId = null;
+            _form.CourseId = null;
+        }
+
+        _form.SectionId = null;
+        ApplySectionFilter();
+        return Task.CompletedTask;
+    }
+
+    private IEnumerable<Announcement> Filtered()
+    {
+        IEnumerable<Announcement> q = _items;
+
+        if (!string.IsNullOrWhiteSpace(_q))
+        {
+            var s = _q.Trim();
+            q = q.Where(x => (x.Title ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_targetFilter) && Enum.TryParse<AnnouncementTargetType>(_targetFilter, out var target))
+        {
+            q = q.Where(x => x.TargetType == target);
+        }
+
+        return q.OrderByDescending(x => x.PublishedAt);
+    }
+
+    private async Task Save()
+    {
+        if (_saving) return;
+        _saving = true;
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                await _JS.ToastrError("تعذر تحديد المستخدم الحالي");
+                return;
+            }
+
+            var announcement = new Announcement
+            {
+                Title = (_form.Title ?? string.Empty).Trim(),
+                Content = (_form.Content ?? string.Empty).Trim(),
+                FacultyId = userId,
+                CourseId = _form.CourseId,
+                SectionId = _form.SectionId,
+                TargetStudentId = _form.TargetStudentId,
+                TargetType = _form.TargetType,
+                Priority = _form.Priority,
+                ExpireAt = _form.ExpireAt,
+                IsImportant = _form.IsImportant,
+                PublishedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _repo.CreateAsync(announcement);
+
+            var recipients = await _repo.ResolveRecipientsAsync(
+                _form.TargetType,
+                _selectedDepartmentId,
+                _form.CourseId,
+                _form.SectionId,
+                _form.TargetStudentId);
+
+            await _repo.CreateRecipientsAsync(announcement.Id, recipients.Select(x => x.Id).ToList());
+
+            await _JS.ToastrSuccess("تم نشر التعميم بنجاح");
+            ResetForm();
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"فشلت العملية: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task AskDelete(int id, string title)
+    {
+        _deleteAnnouncementId = id;
+        _deleteAnnouncementTitle = title;
+
+        if (_deleteModal is not null)
+            await _deleteModal.ShowAsync();
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        try
+        {
+            await _repo.DeleteAsync(_deleteAnnouncementId);
+            await _JS.ToastrSuccess("تم حذف التعميم بنجاح");
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"تعذر حذف التعميم: {ex.Message}");
+        }
+    }
+
+    private static string GetTargetTypeText(AnnouncementTargetType type) => type switch
+    {
+        AnnouncementTargetType.AllStudents => "جميع الطلبة",
+        AnnouncementTargetType.ByDepartment => "حسب القسم",
+        AnnouncementTargetType.ByCourse => "حسب المادة",
+        AnnouncementTargetType.BySection => "حسب الشعبة",
+        AnnouncementTargetType.IndividualStudent => "طالب محدد",
+        _ => type.ToString()
+    };
+
+    private static string GetPriorityText(AnnouncementPriority priority) => priority switch
+    {
+        AnnouncementPriority.Low => "منخفضة",
+        AnnouncementPriority.Normal => "عادية",
+        AnnouncementPriority.High => "عالية",
+        AnnouncementPriority.Urgent => "عاجلة",
+        _ => priority.ToString()
+    };
+
+    private static string GetPriorityClass(AnnouncementPriority priority) => priority switch
+    {
+        AnnouncementPriority.High => "pill-high",
+        AnnouncementPriority.Urgent => "pill-urgent",
+        _ => "pill-normal"
+    };
+
+    private static string DescribeTarget(Announcement item)
+    {
+        return item.TargetType switch
+        {
+            AnnouncementTargetType.AllStudents => "جميع الطلبة",
+            AnnouncementTargetType.ByDepartment => item.Course?.Department?.Name ?? "حسب القسم",
+            AnnouncementTargetType.ByCourse => item.Course?.CourseName ?? "حسب المادة",
+            AnnouncementTargetType.BySection => item.Section?.SectionName ?? "حسب الشعبة",
+            AnnouncementTargetType.IndividualStudent => item.TargetStudent?.FullName ?? "طالب محدد",
+            _ => "-"
+        };
+    }
+}

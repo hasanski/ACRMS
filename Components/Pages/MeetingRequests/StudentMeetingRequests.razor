@@ -1,0 +1,287 @@
+﻿@page "/student/meeting-requests"
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@using ACRMS.Data
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@using static ACRMS.Data.Enums
+@inject IMeetingRequestRepository _repo
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime _JS
+@attribute [Authorize(Roles = "Student")]
+
+<ConfirmationModal @ref="_deleteModal"
+                   ModalId="deleteStudentMeetingRequestModal"
+                   Title="تأكيد حذف الطلب"
+                   Message="@_deleteMessage"
+                   ConfirmButtonText="حذف"
+                   ConfirmButtonClass="btn-danger"
+                   OnConfirm="ConfirmDeleteAsync" />
+
+<PageTitle>طلب موعد</PageTitle>
+
+<style>
+    .wrap { max-width: 1200px; margin: auto; padding: 16px; }
+    .card { background: #fff; border: 1px solid #e8e8e8; border-radius: 16px; box-shadow: 0 8px 25px rgba(0,0,0,.06); overflow: hidden; }
+    .head { padding: 14px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 10px; background: linear-gradient(180deg,#fff 0%,#fafafa 100%); }
+    .title { margin: 0; font-weight: 900; font-size: 18px; }
+    .badge-soft { background: #f3f6ff; border: 1px solid #dfe8ff; color: #0d6efd; padding: 6px 10px; border-radius: 999px; font-weight: 800; font-size: 12px; white-space: nowrap; }
+    .body { padding: 16px; }
+    .section { border: 1px solid #ececec; border-radius: 14px; padding: 14px; background: #fff; }
+    .sec-title { font-weight: 900; margin: 0 0 12px 0; font-size: 15px; color: #222; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+    @@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .table td, .table th { vertical-align: middle; }
+    .empty-box { text-align: center; padding: 24px; border: 1px dashed #d9d9d9; border-radius: 14px; background: #fafafa; color: #666; font-size: 15px; }
+    .pill { padding: 5px 10px; border-radius: 999px; font-weight: 800; font-size: 12px; border: 1px solid #eee; display: inline-block; }
+    .pill-pending { background: #fff3cd; border-color: #ffe69c; color: #856404; }
+    .pill-approved { background: #d1e7dd; border-color: #a3cfbb; color: #0f5132; }
+    .pill-rejected { background: #f8d7da; border-color: #f1aeb5; color: #842029; }
+</style>
+
+<div class="wrap" dir="rtl">
+    <div class="card">
+        <div class="head">
+            <h3 class="title">طلبات المواعيد</h3>
+            <span class="badge-soft">إنشاء ومتابعة الطلبات</span>
+        </div>
+
+        <div class="body">
+            <div class="section">
+                <div class="sec-title">طلب موعد جديد</div>
+
+                <EditForm EditContext="_editContext" OnValidSubmit="Save">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="grid">
+                        <div>
+                            <label class="form-label">الدكتور</label>
+                            <InputSelect class="form-control" @bind-Value="_form.FacultyId">
+                                <option value="">-- اختر الدكتور --</option>
+                                @foreach (var faculty in _facultyMembers)
+                                {
+                                    <option value="@faculty.Id">@faculty.FullName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="form-label">التاريخ المفضل</label>
+                            <InputDate class="form-control" @bind-Value="_form.PreferredDate" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">موضوع الطلب</label>
+                            <InputText class="form-control" @bind-Value="_form.Subject" />
+                        </div>
+
+                        <div style="grid-column:1 / -1;">
+                            <label class="form-label">الوصف</label>
+                            <InputTextArea class="form-control" rows="4" @bind-Value="_form.Description" />
+                        </div>
+
+                        <div style="grid-column:1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @(_saving ? "جارٍ الحفظ..." : "إرسال الطلب")
+                            </button>
+
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm">
+                                مسح النموذج
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <hr />
+
+            <div class="section">
+                <div class="sec-title">طلباتي</div>
+
+                @if (_items.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الرقم المرجعي</th>
+                                    <th>الدكتور</th>
+                                    <th>الموضوع</th>
+                                    <th>التاريخ المفضل</th>
+                                    <th>الحالة</th>
+                                    <th>رد الدكتور</th>
+                                    <th style="width:120px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _items)
+                                {
+                                    var subject = item.Subject;
+
+                                    <tr>
+                                        <td>@item.ReferenceNumber</td>
+                                        <td>@item.Faculty?.FullName</td>
+                                        <td>@item.Subject</td>
+                                        <td>@item.PreferredDate.ToString("yyyy-MM-dd")</td>
+                                        <td>
+                                            <span class="pill @GetStatusClass(item.Status)">
+                                                @GetStatusText(item.Status)
+                                            </span>
+                                        </td>
+                                        <td>@item.FacultyResponse</td>
+                                        <td class="text-end">
+                                            @if (item.Status == RequestStatus.Pending)
+                                            {
+                                                <button class="btn btn-outline-danger btn-sm"
+                                                        @onclick="@(async () => await AskDelete(item.Id, subject))">
+                                                    حذف
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-box">لا توجد طلبات مواعيد حاليًا.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class MeetingRequestForm
+    {
+        [Required(ErrorMessage = "الدكتور مطلوب")]
+        public string? FacultyId { get; set; }
+
+        [Required(ErrorMessage = "الموضوع مطلوب")]
+        [MaxLength(200)]
+        public string? Subject { get; set; }
+
+        [Required(ErrorMessage = "الوصف مطلوب")]
+        public string? Description { get; set; }
+
+        [Required(ErrorMessage = "التاريخ المفضل مطلوب")]
+        public DateTime? PreferredDate { get; set; } = DateTime.Today;
+    }
+
+    private ConfirmationModal? _deleteModal;
+    private int _deleteRequestId;
+    private string _deleteRequestTitle = string.Empty;
+    private string _deleteMessage => $"هل أنت متأكد من حذف طلب الموعد \"{_deleteRequestTitle}\"؟";
+
+    private bool _saving = false;
+    private string _studentId = string.Empty;
+
+    private List<MeetingRequest> _items = new();
+    private List<ApplicationUser> _facultyMembers = new();
+
+    private MeetingRequestForm _form = new();
+    private EditContext _editContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrentUser();
+        ResetForm();
+        await Load();
+    }
+
+    private async Task LoadCurrentUser()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _studentId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+    }
+
+    private void ResetForm()
+    {
+        _form = new MeetingRequestForm();
+        _editContext = new EditContext(_form);
+    }
+
+    private async Task Load()
+    {
+        _items = await _repo.GetStudentRequestsAsync(_studentId);
+        _facultyMembers = await _repo.GetFacultyAsync();
+        StateHasChanged();
+    }
+
+    private async Task Save()
+    {
+        if (_saving) return;
+        _saving = true;
+
+        try
+        {
+            var referenceNumber = await _repo.GenerateReferenceNumberAsync();
+
+            await _repo.CreateAsync(new MeetingRequest
+            {
+                ReferenceNumber = referenceNumber,
+                StudentId = _studentId,
+                FacultyId = _form.FacultyId!,
+                Subject = (_form.Subject ?? string.Empty).Trim(),
+                Description = (_form.Description ?? string.Empty).Trim(),
+                PreferredDate = _form.PreferredDate ?? DateTime.Today,
+                Status = RequestStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _JS.ToastrSuccess("تم إنشاء طلب الموعد بنجاح");
+            ResetForm();
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"فشلت العملية: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task AskDelete(int id, string title)
+    {
+        _deleteRequestId = id;
+        _deleteRequestTitle = title;
+
+        if (_deleteModal is not null)
+            await _deleteModal.ShowAsync();
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        try
+        {
+            await _repo.DeleteAsync(_deleteRequestId);
+            await _JS.ToastrSuccess("تم حذف الطلب بنجاح");
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"تعذر حذف الطلب: {ex.Message}");
+        }
+    }
+
+    private static string GetStatusText(RequestStatus status) => status switch
+    {
+        RequestStatus.Pending => "قيد الانتظار",
+        RequestStatus.Approved => "مقبول",
+        RequestStatus.Rejected => "مرفوض",
+        _ => status.ToString()
+    };
+
+    private static string GetStatusClass(RequestStatus status) => status switch
+    {
+        RequestStatus.Pending => "pill-pending",
+        RequestStatus.Approved => "pill-approved",
+        RequestStatus.Rejected => "pill-rejected",
+        _ => "pill-pending"
+    };
+}

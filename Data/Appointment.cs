@@ -5,7 +5,7 @@ namespace ACRMS.Data
 {
     public class Appointment : BaseEntity
     {
-        public int MeetingRequestId { get; set; }
+        public int? MeetingRequestId { get; set; }
         public MeetingRequest? MeetingRequest { get; set; }
 
         [Required]

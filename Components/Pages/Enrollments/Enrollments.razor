@@ -1,0 +1,626 @@
+﻿@page "/admin/enrollments"
+@using System.ComponentModel.DataAnnotations
+@using ACRMS.Data
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@inject IEnrollmentRepository _repo
+@inject IJSRuntime _JS
+@attribute [Authorize(Roles = "Admin")]
+
+<ConfirmationModal @ref="_deleteModal"
+                   ModalId="deleteEnrollmentModal"
+                   Title="تأكيد حذف التسجيل"
+                   Message="@_deleteMessage"
+                   ConfirmButtonText="حذف"
+                   ConfirmButtonClass="btn-danger"
+                   OnConfirm="ConfirmDeleteAsync" />
+
+<PageTitle>إدارة التسجيلات</PageTitle>
+
+<style>
+    .wrap {
+        max-width: 1250px;
+        margin: auto;
+        padding: 16px;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .head {
+        padding: 14px 16px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(180deg,#fff 0%,#fafafa 100%);
+    }
+
+    .title {
+        margin: 0;
+        font-weight: 900;
+        font-size: 18px;
+    }
+
+    .badge-soft {
+        background: #f3f6ff;
+        border: 1px solid #dfe8ff;
+        color: #0d6efd;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .body {
+        padding: 16px;
+    }
+
+    .section {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .sec-title {
+        font-weight: 900;
+        margin: 0 0 12px 0;
+        font-size: 15px;
+        color: #222;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        align-items: end;
+    }
+
+    @@media (max-width: 900px) {
+        .grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .table td, .table th {
+        vertical-align: middle;
+    }
+
+    .muted {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .empty-box {
+        text-align: center;
+        padding: 24px;
+        border: 1px dashed #d9d9d9;
+        border-radius: 14px;
+        background: #fafafa;
+        color: #666;
+        font-size: 15px;
+    }
+</style>
+
+<div class="wrap" dir="rtl">
+    <div class="card">
+        <div class="head">
+            <h3 class="title">إدارة التسجيلات</h3>
+            <span class="badge-soft">ربط الطالب بالمادة والشعبة</span>
+        </div>
+
+        <div class="body">
+            <div class="section">
+                <div class="sec-title">إضافة تسجيل جديد</div>
+
+                <EditForm EditContext="_editContext" OnValidSubmit="Save">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="grid">
+                        <div>
+                            <label class="form-label">الطالب</label>
+                            <InputSelect class="form-control" @bind-Value="_form.StudentId">
+                                <option value="">-- اختر الطالب --</option>
+                                @foreach (var student in _students)
+                                {
+                                    <option value="@student.Id">@student.FullName (@student.UniversityNumber)</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => _form.StudentId)" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">الكلية</label>
+                            <select class="form-control" @onchange="OnFacultyChanged">
+                                <option value="">-- اختر الكلية --</option>
+                                @foreach (var faculty in _faculties)
+                                {
+                                    <option value="@faculty" selected="@(faculty == _selectedFacultyName)">
+                                        @faculty
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">القسم</label>
+                            <select class="form-control" @onchange="OnDepartmentChanged" disabled="@(!_filteredDepartments.Any())">
+                                <option value="">-- اختر القسم --</option>
+                                @foreach (var department in _filteredDepartments)
+                                {
+                                    <option value="@department.Id" selected="@(department.Id == _selectedDepartmentId)">
+                                        @department.Name
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">المادة</label>
+                            <select class="form-control" @onchange="OnCourseChanged" disabled="@(!_filteredCourses.Any())">
+                                <option value="">-- اختر المادة --</option>
+                                @foreach (var course in _filteredCourses)
+                                {
+                                    <option value="@course.Id" selected="@(course.Id == _selectedCourseId)">
+                                        @course.CourseName (@course.CourseCode)
+                                    </option>
+                                }
+                            </select>
+                            <ValidationMessage For="@(() => _form.CourseId)" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">الشعبة</label>
+                            <InputSelect class="form-control" @bind-Value="_form.SectionId" disabled="@(!_filteredSections.Any())">
+                                <option value="">-- اختر الشعبة --</option>
+                                @foreach (var sec in _filteredSections)
+                                {
+                                    <option value="@sec.Id">@sec.SectionName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div style="grid-column: 1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @(_saving ? "جارٍ الحفظ..." : "إضافة")
+                            </button>
+
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm">
+                                مسح النموذج
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <hr />
+
+            <div class="section">
+                <div class="sec-title">قائمة التسجيلات</div>
+
+                <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 1fr 180px;">
+                    <div>
+                        <label class="form-label">بحث</label>
+                        <input class="form-control" @bind="_q" @bind:event="oninput" placeholder="ابحث بالطالب أو المادة أو الشعبة..." />
+                    </div>
+
+                    <div>
+                        <label class="form-label">فلترة حسب الكلية</label>
+                        <select class="form-control" @onchange="OnTableFacultyChanged">
+                            <option value="">-- كل الكليات --</option>
+                            @foreach (var faculty in _faculties)
+                            {
+                                <option value="@faculty" selected="@(faculty == _tableFacultyFilter)">
+                                    @faculty
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="form-label">فلترة حسب القسم</label>
+                        <InputSelect class="form-control" @bind-Value="_tableDepartmentFilter" disabled="@(!_tableFilteredDepartments.Any())">
+                            <option value="">-- كل الأقسام --</option>
+                            @foreach (var department in _tableFilteredDepartments)
+                            {
+                                <option value="@department.Id">@department.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div>
+                        <label class="form-label">فلترة حسب المادة</label>
+                        <InputSelect class="form-control" @bind-Value="_tableCourseFilter">
+                            <option value="">-- كل المواد --</option>
+                            @foreach (var course in TableFilteredCourses())
+                            {
+                                <option value="@course.Id">@course.CourseName</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div>
+                        <button class="btn btn-success w-100" @onclick="Load">تحديث</button>
+                    </div>
+                </div>
+
+                <div class="muted" style="margin-top:8px;">عدد النتائج: @Filtered().Count()</div>
+
+                @if (Filtered().Any())
+                {
+                    <div class="table-responsive" style="margin-top:10px;">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الطالب</th>
+                                    <th>الرقم الجامعي</th>
+                                    <th>الكلية</th>
+                                    <th>القسم</th>
+                                    <th>المادة</th>
+                                    <th>الشعبة</th>
+                                    <th>تاريخ التسجيل</th>
+                                    <th style="width:120px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Filtered())
+                                {
+                                    var studentName = item.Student?.FullName ?? "هذا الطالب";
+
+                                    <tr>
+                                        <td>@item.Student?.FullName</td>
+                                        <td>@item.Student?.UniversityNumber</td>
+                                        <td>@item.Course?.Department?.FacultyName</td>
+                                        <td>@item.Course?.Department?.Name</td>
+                                        <td>@item.Course?.CourseName</td>
+                                        <td>@item.Section?.SectionName</td>
+                                        <td>@item.EnrolledAt.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-danger btn-sm"
+                                                    @onclick="@(async () => await AskDelete(item.Id, studentName))">
+                                                حذف
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-box" style="margin-top: 12px;">
+                        لا توجد تسجيلات مضافة حاليًا.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class EnrollmentForm
+    {
+        [Required(ErrorMessage = "الطالب مطلوب")]
+        public string? StudentId { get; set; }
+
+        [Required(ErrorMessage = "المادة مطلوبة")]
+        [Range(1, int.MaxValue, ErrorMessage = "اختر المادة")]
+        public int? CourseId { get; set; }
+
+        public int? SectionId { get; set; }
+    }
+
+    private ConfirmationModal? _deleteModal;
+    private int _deleteEnrollmentId;
+    private string _deleteStudentName = string.Empty;
+    private string _deleteMessage => $"هل أنت متأكد من حذف تسجيل الطالب \"{_deleteStudentName}\"؟";
+
+    private bool _saving = false;
+    private string _q = string.Empty;
+
+    private List<Enrollment> _items = new();
+    private List<ApplicationUser> _students = new();
+    private List<Department> _departments = new();
+    private List<Course> _courses = new();
+    private List<Section> _sections = new();
+
+    private List<string> _faculties = new();
+    private List<Department> _filteredDepartments = new();
+    private List<Course> _filteredCourses = new();
+    private List<Section> _filteredSections = new();
+
+    private string _selectedFacultyName = string.Empty;
+    private int? _selectedDepartmentId = null;
+    private int? _selectedCourseId = null;
+
+    private string _tableFacultyFilter = string.Empty;
+    private int? _tableDepartmentFilter = null;
+    private int? _tableCourseFilter = null;
+    private List<Department> _tableFilteredDepartments = new();
+
+    private EnrollmentForm _form = new();
+    private EditContext _editContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResetForm();
+        await Load();
+    }
+
+    private void ResetForm()
+    {
+        _form = new EnrollmentForm();
+        _editContext = new EditContext(_form);
+
+        _selectedFacultyName = string.Empty;
+        _selectedDepartmentId = null;
+        _selectedCourseId = null;
+
+        _filteredDepartments = new();
+        _filteredCourses = new();
+        _filteredSections = new();
+    }
+
+    private async Task Load()
+    {
+        _items = await _repo.ListAsync();
+        _students = await _repo.GetStudentsAsync();
+        _departments = await _repo.GetDepartmentsAsync();
+        _courses = await _repo.GetCoursesAsync();
+        _sections = await _repo.GetSectionsAsync();
+
+        _faculties = _departments
+            .Where(d => !string.IsNullOrWhiteSpace(d.FacultyName))
+            .Select(d => d.FacultyName!.Trim())
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        ApplyDepartmentFilter();
+        ApplyCourseFilter();
+        ApplySectionFilter();
+        ApplyTableDepartmentFilter();
+
+        StateHasChanged();
+    }
+
+    private void ApplyDepartmentFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedFacultyName))
+        {
+            _filteredDepartments = new();
+            _selectedDepartmentId = null;
+            return;
+        }
+
+        _filteredDepartments = _departments
+            .Where(d => d.FacultyName == _selectedFacultyName)
+            .OrderBy(d => d.Name)
+            .ToList();
+
+        if (_selectedDepartmentId.HasValue && !_filteredDepartments.Any(d => d.Id == _selectedDepartmentId.Value))
+            _selectedDepartmentId = null;
+    }
+
+    private void ApplyCourseFilter()
+    {
+        if (!_selectedDepartmentId.HasValue)
+        {
+            _filteredCourses = new();
+            _selectedCourseId = null;
+            _form.CourseId = null;
+            return;
+        }
+
+        _filteredCourses = _courses
+            .Where(c => c.DepartmentId == _selectedDepartmentId.Value)
+            .OrderBy(c => c.CourseName)
+            .ToList();
+
+        if (_selectedCourseId.HasValue && !_filteredCourses.Any(c => c.Id == _selectedCourseId.Value))
+            _selectedCourseId = null;
+
+        if (_form.CourseId.HasValue && !_filteredCourses.Any(c => c.Id == _form.CourseId.Value))
+            _form.CourseId = null;
+    }
+
+    private void ApplySectionFilter()
+    {
+        if (!_selectedCourseId.HasValue)
+        {
+            _filteredSections = new();
+            _form.SectionId = null;
+            return;
+        }
+
+        _filteredSections = _sections
+            .Where(s => s.CourseId == _selectedCourseId.Value)
+            .OrderBy(s => s.SectionName)
+            .ToList();
+
+        if (_form.SectionId.HasValue && !_filteredSections.Any(s => s.Id == _form.SectionId.Value))
+            _form.SectionId = null;
+    }
+
+    private void ApplyTableDepartmentFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_tableFacultyFilter))
+        {
+            _tableFilteredDepartments = new();
+            _tableDepartmentFilter = null;
+            _tableCourseFilter = null;
+            return;
+        }
+
+        _tableFilteredDepartments = _departments
+            .Where(d => d.FacultyName == _tableFacultyFilter)
+            .OrderBy(d => d.Name)
+            .ToList();
+
+        if (_tableDepartmentFilter.HasValue && !_tableFilteredDepartments.Any(d => d.Id == _tableDepartmentFilter.Value))
+            _tableDepartmentFilter = null;
+    }
+
+    private IEnumerable<Course> TableFilteredCourses()
+    {
+        IEnumerable<Course> q = _courses;
+
+        if (_tableDepartmentFilter.HasValue)
+            q = q.Where(c => c.DepartmentId == _tableDepartmentFilter.Value);
+        else if (!string.IsNullOrWhiteSpace(_tableFacultyFilter))
+            q = q.Where(c => c.Department != null && c.Department.FacultyName == _tableFacultyFilter);
+
+        return q.OrderBy(c => c.CourseName);
+    }
+
+    private Task OnFacultyChanged(ChangeEventArgs e)
+    {
+        _selectedFacultyName = e.Value?.ToString() ?? string.Empty;
+        _selectedDepartmentId = null;
+        _selectedCourseId = null;
+        _form.CourseId = null;
+        _form.SectionId = null;
+
+        ApplyDepartmentFilter();
+        ApplyCourseFilter();
+        ApplySectionFilter();
+        return Task.CompletedTask;
+    }
+
+    private Task OnDepartmentChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+            _selectedDepartmentId = id;
+        else
+            _selectedDepartmentId = null;
+
+        _selectedCourseId = null;
+        _form.CourseId = null;
+        _form.SectionId = null;
+
+        ApplyCourseFilter();
+        ApplySectionFilter();
+        return Task.CompletedTask;
+    }
+
+    private Task OnCourseChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            _selectedCourseId = id;
+            _form.CourseId = id;
+        }
+        else
+        {
+            _selectedCourseId = null;
+            _form.CourseId = null;
+        }
+
+        _form.SectionId = null;
+        ApplySectionFilter();
+        return Task.CompletedTask;
+    }
+
+    private Task OnTableFacultyChanged(ChangeEventArgs e)
+    {
+        _tableFacultyFilter = e.Value?.ToString() ?? string.Empty;
+        _tableDepartmentFilter = null;
+        _tableCourseFilter = null;
+        ApplyTableDepartmentFilter();
+        return Task.CompletedTask;
+    }
+
+    private IEnumerable<Enrollment> Filtered()
+    {
+        IEnumerable<Enrollment> q = _items;
+
+        if (!string.IsNullOrWhiteSpace(_q))
+        {
+            var s = _q.Trim();
+            q = q.Where(x =>
+                (x.Student?.FullName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.Student?.UniversityNumber ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.Course?.CourseName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.Section?.SectionName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_tableFacultyFilter))
+            q = q.Where(x => x.Course?.Department?.FacultyName == _tableFacultyFilter);
+
+        if (_tableDepartmentFilter.HasValue)
+            q = q.Where(x => x.Course?.DepartmentId == _tableDepartmentFilter.Value);
+
+        if (_tableCourseFilter.HasValue)
+            q = q.Where(x => x.CourseId == _tableCourseFilter.Value);
+
+        return q.OrderByDescending(x => x.Id);
+    }
+
+    private async Task Save()
+    {
+        if (_saving) return;
+        _saving = true;
+
+        try
+        {
+            if (await _repo.ExistsAsync(_form.StudentId!, _form.CourseId!.Value, _form.SectionId))
+            {
+                await _JS.ToastrError("هذا التسجيل موجود مسبقًا");
+                return;
+            }
+
+            await _repo.CreateAsync(new Enrollment
+            {
+                StudentId = _form.StudentId!,
+                CourseId = _form.CourseId!.Value,
+                SectionId = _form.SectionId,
+                EnrolledAt = DateTime.UtcNow
+            });
+
+            await _JS.ToastrSuccess("تمت إضافة التسجيل بنجاح");
+            ResetForm();
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"فشلت العملية: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task AskDelete(int id, string studentName)
+    {
+        _deleteEnrollmentId = id;
+        _deleteStudentName = studentName;
+
+        if (_deleteModal is not null)
+            await _deleteModal.ShowAsync();
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        try
+        {
+            await _repo.DeleteAsync(_deleteEnrollmentId);
+            await _JS.ToastrSuccess("تم حذف التسجيل بنجاح");
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"تعذر حذف التسجيل: {ex.Message}");
+        }
+    }
+}

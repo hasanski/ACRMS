@@ -1,0 +1,494 @@
+﻿@page "/meeting-requests"
+@using System.ComponentModel.DataAnnotations
+@using ACRMS.Data
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@using static ACRMS.Data.Enums
+@inject IMeetingRequestRepository _repo
+@inject IJSRuntime _JS
+@attribute [Authorize(Roles = "Admin,Faculty")]
+
+<ConfirmationModal @ref="_deleteModal"
+                   ModalId="deleteMeetingRequestModal"
+                   Title="تأكيد حذف الطلب"
+                   Message="@_deleteMessage"
+                   ConfirmButtonText="حذف"
+                   ConfirmButtonClass="btn-danger"
+                   OnConfirm="ConfirmDeleteAsync" />
+
+<PageTitle>طلبات المواعيد</PageTitle>
+
+<style>
+    .wrap {
+        max-width: 1250px;
+        margin: auto;
+        padding: 16px;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .head {
+        padding: 14px 16px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(180deg,#fff 0%,#fafafa 100%);
+    }
+
+    .title {
+        margin: 0;
+        font-weight: 900;
+        font-size: 18px;
+    }
+
+    .badge-soft {
+        background: #f3f6ff;
+        border: 1px solid #dfe8ff;
+        color: #0d6efd;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .body {
+        padding: 16px;
+    }
+
+    .section {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .sec-title {
+        font-weight: 900;
+        margin: 0 0 12px 0;
+        font-size: 15px;
+        color: #222;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        align-items: end;
+    }
+
+    @@media (max-width: 900px) {
+        .grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .table td, .table th {
+        vertical-align: middle;
+    }
+
+    .muted {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .empty-box {
+        text-align: center;
+        padding: 24px;
+        border: 1px dashed #d9d9d9;
+        border-radius: 14px;
+        background: #fafafa;
+        color: #666;
+        font-size: 15px;
+    }
+
+    .pill {
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        border: 1px solid #eee;
+        display: inline-block;
+    }
+
+    .pill-pending {
+        background: #fff3cd;
+        border-color: #ffe69c;
+        color: #856404;
+    }
+
+    .pill-approved {
+        background: #d1e7dd;
+        border-color: #a3cfbb;
+        color: #0f5132;
+    }
+
+    .pill-rejected {
+        background: #f8d7da;
+        border-color: #f1aeb5;
+        color: #842029;
+    }
+</style>
+
+<div class="wrap" dir="rtl">
+    <div class="card">
+        <div class="head">
+            <h3 class="title">طلبات المواعيد</h3>
+            <span class="badge-soft">إنشاء / متابعة / تحديث الحالة</span>
+        </div>
+
+        <div class="body">
+            <div class="section">
+                <div class="sec-title">إضافة طلب موعد</div>
+
+                <EditForm EditContext="_editContext" OnValidSubmit="Save">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="grid">
+                        <div>
+                            <label class="form-label">الطالب</label>
+                            <InputSelect class="form-control" @bind-Value="_form.StudentId">
+                                <option value="">-- اختر الطالب --</option>
+                                @foreach (var student in _students)
+                                {
+                                    <option value="@student.Id">@student.FullName (@student.UniversityNumber)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="form-label">الدكتور</label>
+                            <InputSelect class="form-control" @bind-Value="_form.FacultyId">
+                                <option value="">-- اختر الدكتور --</option>
+                                @foreach (var faculty in _facultyMembers)
+                                {
+                                    <option value="@faculty.Id">@faculty.FullName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="form-label">موضوع الطلب</label>
+                            <InputText class="form-control" @bind-Value="_form.Subject" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">التاريخ المفضل</label>
+                            <InputDate class="form-control" @bind-Value="_form.PreferredDate" />
+                        </div>
+
+                        <div style="grid-column:1 / -1;">
+                            <label class="form-label">الوصف</label>
+                            <InputTextArea class="form-control" rows="4" @bind-Value="_form.Description" />
+                        </div>
+
+                        <div style="grid-column:1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @(_saving ? "جارٍ الحفظ..." : "إضافة")
+                            </button>
+
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm">
+                                مسح النموذج
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <hr />
+
+            <div class="section">
+                <div class="sec-title">قائمة طلبات المواعيد</div>
+
+                <div class="grid" style="grid-template-columns: 1fr 220px 180px;">
+                    <div>
+                        <label class="form-label">بحث</label>
+                        <input class="form-control" @bind="_q" @bind:event="oninput" placeholder="ابحث بالطالب أو الدكتور أو الموضوع..." />
+                    </div>
+
+                    <div>
+                        <label class="form-label">الحالة</label>
+                        <InputSelect class="form-control" @bind-Value="_statusFilter">
+                            <option value="">الكل</option>
+                            @foreach (var st in Enum.GetValues<RequestStatus>())
+                            {
+                                <option value="@st">@GetStatusText(st)</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div>
+                        <button class="btn btn-success w-100" @onclick="Load">تحديث</button>
+                    </div>
+                </div>
+
+                <div class="muted" style="margin-top:8px;">عدد النتائج: @Filtered().Count()</div>
+
+                @if (Filtered().Any())
+                {
+                    <div class="table-responsive" style="margin-top:10px;">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الرقم المرجعي</th>
+                                    <th>الطالب</th>
+                                    <th>الدكتور</th>
+                                    <th>الموضوع</th>
+                                    <th>التاريخ المفضل</th>
+                                    <th>الحالة</th>
+                                    <th style="width:260px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Filtered())
+                                {
+                                    var subject = item.Subject;
+
+                                    <tr>
+                                        <td>@item.ReferenceNumber</td>
+                                        <td>@item.Student?.FullName</td>
+                                        <td>@item.Faculty?.FullName</td>
+                                        <td>@item.Subject</td>
+                                        <td>@item.PreferredDate.ToString("yyyy-MM-dd")</td>
+                                        <td>
+                                            <span class="pill @GetStatusClass(item.Status)">
+                                                @GetStatusText(item.Status)
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-success btn-sm"
+                                                    @onclick="@(async () => await UpdateStatus(item.Id, RequestStatus.Approved))">
+                                                موافقة
+                                            </button>
+
+                                            <button class="btn btn-outline-warning btn-sm"
+                                                    @onclick="@(async () => await PromptReject(item.Id))">
+                                                رفض
+                                            </button>
+
+                                            <button class="btn btn-outline-danger btn-sm"
+                                                    @onclick="@(async () => await AskDelete(item.Id, subject))">
+                                                حذف
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    @if (!string.IsNullOrWhiteSpace(item.Description) || !string.IsNullOrWhiteSpace(item.FacultyResponse))
+                                    {
+                                        <tr>
+                                            <td colspan="7" style="background:#fafafa;">
+                                                <div><strong>الوصف:</strong> @item.Description</div>
+                                                @if (!string.IsNullOrWhiteSpace(item.FacultyResponse))
+                                                {
+                                                    <div class="mt-1"><strong>رد الدكتور:</strong> @item.FacultyResponse</div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-box" style="margin-top: 12px;">
+                        لا توجد طلبات مواعيد حاليًا.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class MeetingRequestForm
+    {
+        [Required(ErrorMessage = "الطالب مطلوب")]
+        public string? StudentId { get; set; }
+
+        [Required(ErrorMessage = "الدكتور مطلوب")]
+        public string? FacultyId { get; set; }
+
+        [Required(ErrorMessage = "الموضوع مطلوب")]
+        [MaxLength(200)]
+        public string? Subject { get; set; }
+
+        [Required(ErrorMessage = "الوصف مطلوب")]
+        public string? Description { get; set; }
+
+        [Required(ErrorMessage = "التاريخ المفضل مطلوب")]
+        public DateTime? PreferredDate { get; set; } = DateTime.Today;
+    }
+
+    private ConfirmationModal? _deleteModal;
+    private int _deleteRequestId;
+    private string _deleteRequestTitle = string.Empty;
+    private string _deleteMessage => $"هل أنت متأكد من حذف طلب الموعد \"{_deleteRequestTitle}\"؟";
+
+    private bool _saving = false;
+    private string _q = string.Empty;
+    private string _statusFilter = string.Empty;
+
+    private List<MeetingRequest> _items = new();
+    private List<ApplicationUser> _students = new();
+    private List<ApplicationUser> _facultyMembers = new();
+
+    private MeetingRequestForm _form = new();
+    private EditContext _editContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResetForm();
+        await Load();
+    }
+
+    private void ResetForm()
+    {
+        _form = new MeetingRequestForm();
+        _editContext = new EditContext(_form);
+    }
+
+    private async Task Load()
+    {
+        _items = await _repo.ListAsync();
+        _students = await _repo.GetStudentsAsync();
+        _facultyMembers = await _repo.GetFacultyAsync();
+        StateHasChanged();
+    }
+
+    private IEnumerable<MeetingRequest> Filtered()
+    {
+        IEnumerable<MeetingRequest> q = _items;
+
+        if (!string.IsNullOrWhiteSpace(_q))
+        {
+            var s = _q.Trim();
+            q = q.Where(x =>
+                (x.Student?.FullName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.Faculty?.FullName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.Subject ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_statusFilter) && Enum.TryParse<RequestStatus>(_statusFilter, out var status))
+        {
+            q = q.Where(x => x.Status == status);
+        }
+
+        return q.OrderByDescending(x => x.CreatedAt);
+    }
+
+    private async Task Save()
+    {
+        if (_saving) return;
+        _saving = true;
+
+        try
+        {
+            var referenceNumber = await _repo.GenerateReferenceNumberAsync();
+
+            await _repo.CreateAsync(new MeetingRequest
+            {
+                ReferenceNumber = referenceNumber,
+                StudentId = _form.StudentId!,
+                FacultyId = _form.FacultyId!,
+                Subject = (_form.Subject ?? string.Empty).Trim(),
+                Description = (_form.Description ?? string.Empty).Trim(),
+                PreferredDate = _form.PreferredDate ?? DateTime.Today,
+                Status = RequestStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _JS.ToastrSuccess("تم إنشاء طلب الموعد بنجاح");
+            ResetForm();
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"فشلت العملية: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task UpdateStatus(int id, RequestStatus status)
+    {
+        try
+        {
+            await _repo.UpdateStatusAsync(id, status, status == RequestStatus.Approved ? "تمت الموافقة على الطلب" : null);
+            await _JS.ToastrSuccess("تم تحديث حالة الطلب");
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"تعذر تحديث الحالة: {ex.Message}");
+        }
+    }
+
+    private async Task PromptReject(int id)
+    {
+        var response = await _JS.InvokeAsync<string>("prompt", "أدخل سبب الرفض:", "تم رفض الطلب");
+        if (response is null) return;
+
+        try
+        {
+            await _repo.UpdateStatusAsync(id, RequestStatus.Rejected, response);
+            await _JS.ToastrSuccess("تم رفض الطلب");
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"تعذر تحديث الحالة: {ex.Message}");
+        }
+    }
+
+    private async Task AskDelete(int id, string title)
+    {
+        _deleteRequestId = id;
+        _deleteRequestTitle = title;
+
+        if (_deleteModal is not null)
+            await _deleteModal.ShowAsync();
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        try
+        {
+            await _repo.DeleteAsync(_deleteRequestId);
+            await _JS.ToastrSuccess("تم حذف الطلب بنجاح");
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"تعذر حذف الطلب: {ex.Message}");
+        }
+    }
+
+    private static string GetStatusText(RequestStatus status) => status switch
+    {
+        RequestStatus.Pending => "قيد الانتظار",
+        RequestStatus.Approved => "مقبول",
+        RequestStatus.Rejected => "مرفوض",
+        _ => status.ToString()
+    };
+
+    private static string GetStatusClass(RequestStatus status) => status switch
+    {
+        RequestStatus.Pending => "pill-pending",
+        RequestStatus.Approved => "pill-approved",
+        RequestStatus.Rejected => "pill-rejected",
+        _ => "pill-pending"
+    };
+}

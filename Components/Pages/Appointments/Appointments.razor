@@ -1,0 +1,449 @@
+﻿@page "/admin/appointments"
+@using System.ComponentModel.DataAnnotations
+@using ACRMS.Data
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@using static ACRMS.Data.Enums
+@inject IAppointmentRepository _repo
+@inject IJSRuntime _JS
+@attribute [Authorize(Roles = "Admin,Faculty")]
+
+<ConfirmationModal @ref="_deleteModal"
+                   ModalId="deleteAppointmentModal"
+                   Title="تأكيد حذف الموعد"
+                   Message="@_deleteMessage"
+                   ConfirmButtonText="حذف"
+                   ConfirmButtonClass="btn-danger"
+                   OnConfirm="ConfirmDeleteAsync" />
+
+<PageTitle>إدارة المواعيد</PageTitle>
+
+<style>
+    .wrap {
+        max-width: 1250px;
+        margin: auto;
+        padding: 16px;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .head {
+        padding: 14px 16px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(180deg,#fff 0%,#fafafa 100%);
+    }
+
+    .title {
+        margin: 0;
+        font-weight: 900;
+        font-size: 18px;
+    }
+
+    .badge-soft {
+        background: #f3f6ff;
+        border: 1px solid #dfe8ff;
+        color: #0d6efd;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .body {
+        padding: 16px;
+    }
+
+    .section {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .sec-title {
+        font-weight: 900;
+        margin: 0 0 12px 0;
+        font-size: 15px;
+        color: #222;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        align-items: end;
+    }
+
+    @@media (max-width: 900px) {
+        .grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .table td, .table th {
+        vertical-align: middle;
+    }
+
+    .empty-box {
+        text-align: center;
+        padding: 24px;
+        border: 1px dashed #d9d9d9;
+        border-radius: 14px;
+        background: #fafafa;
+        color: #666;
+        font-size: 15px;
+    }
+
+    .edit-banner {
+        background: #fff8e6;
+        border: 1px solid #ffe08a;
+        color: #7a5a00;
+        border-radius: 12px;
+        padding: 10px 14px;
+        margin-bottom: 14px;
+        font-weight: 700;
+    }
+</style>
+
+<div class="wrap" dir="rtl">
+    <div class="card">
+        <div class="head">
+            <h3 class="title">إدارة المواعيد</h3>
+            <span class="badge-soft">إضافة / تعديل / حذف</span>
+        </div>
+
+        <div class="body">
+            @if (_editMode)
+            {
+                <div class="edit-banner">
+                    أنت الآن في وضع تعديل موعد.
+                </div>
+            }
+
+            <div class="section">
+                <div class="sec-title">@(_editMode ? "تعديل موعد" : "إضافة موعد جديد")</div>
+
+                <EditForm EditContext="_editContext" OnValidSubmit="Save">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="grid">
+                        <div>
+                            <label class="form-label">طلب الموعد المرتبط (اختياري)</label>
+                            <InputSelect class="form-control" @bind-Value="_form.MeetingRequestId">
+                                <option value="">-- بدون طلب موعد --</option>
+                                @foreach (var request in _meetingRequests)
+                                {
+                                    <option value="@request.Id">
+                                        @request.ReferenceNumber - @request.Student?.FullName
+                                    </option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="form-label">الطالب</label>
+                            <InputSelect class="form-control" @bind-Value="_form.StudentId">
+                                <option value="">-- اختر الطالب --</option>
+                                @foreach (var student in _students)
+                                {
+                                    <option value="@student.Id">@student.FullName (@student.UniversityNumber)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="form-label">الدكتور</label>
+                            <InputSelect class="form-control" @bind-Value="_form.FacultyId">
+                                <option value="">-- اختر الدكتور --</option>
+                                @foreach (var faculty in _facultyMembers)
+                                {
+                                    <option value="@faculty.Id">@faculty.FullName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="form-label">التاريخ والوقت</label>
+                            <InputDate class="form-control" @bind-Value="_form.AppointmentDate" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">المكان</label>
+                            <InputText class="form-control" @bind-Value="_form.Location" />
+                        </div>
+
+                        <div>
+                            <label class="form-label">نوع الموعد</label>
+                            <InputSelect class="form-control" @bind-Value="_form.MeetingType">
+                                @foreach (var t in Enum.GetValues<MeetingType>())
+                                {
+                                    <option value="@t">@GetMeetingTypeText(t)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div>
+                            <label class="form-label">الحالة</label>
+                            <InputSelect class="form-control" @bind-Value="_form.Status">
+                                @foreach (var s in Enum.GetValues<RequestStatus>())
+                                {
+                                    <option value="@s">@GetStatusText(s)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div style="grid-column:1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @(_saving ? "جارٍ الحفظ..." : (_editMode ? "حفظ التعديل" : "إضافة"))
+                            </button>
+
+                            @if (_editMode)
+                            {
+                                <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm">
+                                    إلغاء
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <hr />
+
+            <div class="section">
+                <div class="sec-title">قائمة المواعيد</div>
+
+                @if (_items.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الطالب</th>
+                                    <th>الدكتور</th>
+                                    <th>التاريخ</th>
+                                    <th>المكان</th>
+                                    <th>النوع</th>
+                                    <th>الحالة</th>
+                                    <th>الطلب المرتبط</th>
+                                    <th style="width:180px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _items)
+                                {
+                                    var label = item.Student?.FullName ?? "هذا الموعد";
+
+                                    <tr>
+                                        <td>@item.Student?.FullName</td>
+                                        <td>@item.Faculty?.FullName</td>
+                                        <td>@item.AppointmentDate.ToString("yyyy-MM-dd")</td>
+                                        <td>@item.Location</td>
+                                        <td>@GetMeetingTypeText(item.MeetingType)</td>
+                                        <td>@GetStatusText(item.Status)</td>
+                                        <td>@item.MeetingRequest?.ReferenceNumber</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-warning btn-sm"
+                                                    @onclick="@(async () => await StartEdit(item))">
+                                                تعديل
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm"
+                                                    @onclick="@(async () => await AskDelete(item.Id, label))">
+                                                حذف
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-box">لا توجد مواعيد حاليًا.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class AppointmentForm
+    {
+        public int? Id { get; set; }
+        public int? MeetingRequestId { get; set; }
+
+        [Required(ErrorMessage = "الطالب مطلوب")]
+        public string? StudentId { get; set; }
+
+        [Required(ErrorMessage = "الدكتور مطلوب")]
+        public string? FacultyId { get; set; }
+
+        [Required(ErrorMessage = "التاريخ مطلوب")]
+        public DateTime? AppointmentDate { get; set; } = DateTime.Today;
+
+        [MaxLength(250)]
+        public string? Location { get; set; }
+
+        public MeetingType MeetingType { get; set; } = MeetingType.InPerson;
+        public RequestStatus Status { get; set; } = RequestStatus.Approved;
+    }
+
+    private ConfirmationModal? _deleteModal;
+    private int _deleteAppointmentId;
+    private string _deleteLabel = string.Empty;
+    private string _deleteMessage => $"هل أنت متأكد من حذف الموعد الخاص بـ \"{_deleteLabel}\"؟";
+
+    private bool _saving = false;
+    private bool _editMode = false;
+
+    private List<Appointment> _items = new();
+    private List<ApplicationUser> _students = new();
+    private List<ApplicationUser> _facultyMembers = new();
+    private List<MeetingRequest> _meetingRequests = new();
+
+    private AppointmentForm _form = new();
+    private EditContext _editContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResetForm();
+        await Load();
+    }
+
+    private void ResetForm()
+    {
+        _form = new AppointmentForm();
+        _editContext = new EditContext(_form);
+        _editMode = false;
+    }
+
+    private async Task Load()
+    {
+        _items = await _repo.ListAsync();
+        _students = await _repo.GetStudentsAsync();
+        _facultyMembers = await _repo.GetFacultyAsync();
+        _meetingRequests = await _repo.GetApprovedMeetingRequestsAsync();
+        StateHasChanged();
+    }
+
+    private async Task Save()
+    {
+        if (_saving) return;
+        _saving = true;
+
+        try
+        {
+            if (await _repo.ExistsAsync(_form.StudentId!, _form.FacultyId!, _form.AppointmentDate!.Value, _form.Id))
+            {
+                await _JS.ToastrError("يوجد موعد مطابق مسبقًا");
+                return;
+            }
+
+            var item = new Appointment
+            {
+                Id = _form.Id ?? 0,
+                MeetingRequestId = _form.MeetingRequestId,
+                StudentId = _form.StudentId!,
+                FacultyId = _form.FacultyId!,
+                AppointmentDate = _form.AppointmentDate ?? DateTime.Today,
+                Location = string.IsNullOrWhiteSpace(_form.Location) ? null : _form.Location.Trim(),
+                MeetingType = _form.MeetingType,
+                Status = _form.Status
+            };
+
+            if (_editMode)
+            {
+                await _repo.UpdateAsync(item);
+                await _JS.ToastrSuccess("تم تعديل الموعد بنجاح");
+            }
+            else
+            {
+                await _repo.CreateAsync(item);
+                await _JS.ToastrSuccess("تمت إضافة الموعد بنجاح");
+            }
+
+            ResetForm();
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"فشلت العملية: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private Task StartEdit(Appointment item)
+    {
+        _editMode = true;
+
+        _form = new AppointmentForm
+        {
+            Id = item.Id,
+            MeetingRequestId = item.MeetingRequestId,
+            StudentId = item.StudentId,
+            FacultyId = item.FacultyId,
+            AppointmentDate = item.AppointmentDate,
+            Location = item.Location,
+            MeetingType = item.MeetingType,
+            Status = item.Status
+        };
+
+        _editContext = new EditContext(_form);
+        return Task.CompletedTask;
+    }
+
+    private async Task AskDelete(int id, string label)
+    {
+        _deleteAppointmentId = id;
+        _deleteLabel = label;
+
+        if (_deleteModal is not null)
+            await _deleteModal.ShowAsync();
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        try
+        {
+            await _repo.DeleteAsync(_deleteAppointmentId);
+            await _JS.ToastrSuccess("تم حذف الموعد بنجاح");
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"تعذر حذف الموعد: {ex.Message}");
+        }
+    }
+
+    private static string GetMeetingTypeText(MeetingType type) => type switch
+    {
+        MeetingType.InPerson => "حضوري",
+        MeetingType.Online => "أونلاين",
+        MeetingType.PhoneCall => "اتصال",
+        _ => type.ToString()
+    };
+
+    private static string GetStatusText(RequestStatus status) => status switch
+    {
+        RequestStatus.Pending => "قيد الانتظار",
+        RequestStatus.Approved => "مقبول",
+        RequestStatus.Rejected => "مرفوض",
+        _ => status.ToString()
+    };
+}

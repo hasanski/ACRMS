@@ -28,6 +28,11 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<ISectionRepository, SectionRepository>();
+builder.Services.AddScoped<IUserManagementRepository, UserManagementRepository>();
+builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
+builder.Services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
+builder.Services.AddScoped<IMeetingRequestRepository, MeetingRequestRepository>();
+builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
