@@ -36,6 +36,7 @@ builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 builder.Services.AddScoped<IOfficialExcuseRepository, OfficialExcuseRepository>();
 builder.Services.AddScoped<IGradeReviewRequestRepository, GradeReviewRequestRepository>();
 builder.Services.AddScoped<IAcademicNotificationRepository, AcademicNotificationRepository>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;

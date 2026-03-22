@@ -1,0 +1,373 @@
+﻿@page "/chat"
+@using System.Security.Claims
+@using ACRMS.Data
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@inject IChatRepository _repo
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime _JS
+@attribute [Authorize]
+
+<PageTitle>المحادثات</PageTitle>
+
+<style>
+    .chat-wrap {
+        max-width: 1300px;
+        margin: auto;
+        padding: 16px;
+    }
+
+    .chat-card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .chat-layout {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        min-height: 75vh;
+    }
+
+    @@media (max-width: 950px) {
+        .chat-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .sidebar {
+        border-left: 1px solid #eee;
+        padding: 14px;
+        background: #fafafa;
+    }
+
+    .main {
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        min-height: 75vh;
+    }
+
+    .sec-title {
+        font-weight: 900;
+        margin-bottom: 12px;
+        font-size: 16px;
+    }
+
+    .conversation-item {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: #fff;
+        cursor: pointer;
+        position: relative;
+    }
+
+        .conversation-item.active {
+            background: #f3f8ff;
+            border-color: #b7d1ff;
+        }
+
+    .conversation-meta {
+        color: #666;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    .unread-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: #dc3545;
+        color: white;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 8px;
+    }
+
+    .messages-box {
+        flex: 1;
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        overflow-y: auto;
+        background: #fff;
+        margin-bottom: 12px;
+        min-height: 420px;
+    }
+
+    .message-row {
+        margin-bottom: 12px;
+        display: flex;
+    }
+
+        .message-row.me {
+            justify-content: flex-start;
+        }
+
+        .message-row.other {
+            justify-content: flex-end;
+        }
+
+    .message-bubble {
+        max-width: 70%;
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: #f3f3f3;
+    }
+
+    .message-row.me .message-bubble {
+        background: #dbeafe;
+    }
+
+    .message-meta {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .new-chat-box {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 12px;
+        background: #fff;
+        margin-bottom: 14px;
+    }
+
+    .empty-box {
+        text-align: center;
+        padding: 24px;
+        border: 1px dashed #d9d9d9;
+        border-radius: 14px;
+        background: #fafafa;
+        color: #666;
+        font-size: 15px;
+    }
+</style>
+
+<div class="chat-wrap" dir="rtl">
+    <div class="chat-card">
+        <div class="chat-layout">
+            <div class="sidebar">
+                <div class="sec-title">بدء محادثة جديدة</div>
+
+                <div class="new-chat-box">
+                    <div class="mb-2">
+                        <select class="form-control" @bind="_selectedUserId">
+                            <option value="">-- اختر مستخدمًا --</option>
+                            @foreach (var user in _availableUsers)
+                            {
+                                <option value="@user.Id">@user.FullName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary w-100" @onclick="StartNewChat">
+                        بدء محادثة
+                    </button>
+                </div>
+
+                <div class="sec-title">المحادثات</div>
+
+                @if (_conversations.Any())
+                {
+                    @foreach (var conv in _conversations)
+                    {
+                        var active = _selectedConversationId == conv.Id ? "active" : "";
+                        var unread = GetUnreadCount(conv.Id);
+
+                        <div class="conversation-item @active"
+                             @onclick="@(async () => await OpenConversation(conv.Id))">
+                            @if (unread > 0)
+                            {
+                                <span class="unread-badge">@unread</span>
+                            }
+
+                            <div><strong>@GetConversationDisplayName(conv)</strong></div>
+                            <div class="conversation-meta">
+                                @GetLastMessagePreview(conv)
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-box">لا توجد محادثات بعد.</div>
+                }
+            </div>
+
+            <div class="main">
+                @if (_selectedConversationId.HasValue)
+                {
+                    <div class="sec-title">@_selectedConversationTitle</div>
+
+                    <div class="messages-box">
+                        @if (_messages.Any())
+                        {
+                            @foreach (var msg in _messages)
+                            {
+                                var cls = msg.SenderUserId == _currentUserId ? "me" : "other";
+
+                                <div class="message-row @cls">
+                                    <div class="message-bubble">
+                                        <div>@msg.MessageText</div>
+                                        <div class="message-meta">
+                                            @msg.SenderUser?.FullName -
+                                            @msg.SentAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="empty-box">لا توجد رسائل بعد.</div>
+                        }
+                    </div>
+
+                    <div>
+                        <div class="input-group">
+                            <input class="form-control"
+                                   @bind="_newMessageText"
+                                   placeholder="اكتب رسالتك هنا..." />
+                            <button class="btn btn-success" @onclick="SendMessage">إرسال</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-box" style="margin-top:40px;">
+                        اختر محادثة من القائمة أو ابدأ محادثة جديدة.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _currentUserId = string.Empty;
+
+    private List<Conversation> _conversations = new();
+    private List<Message> _messages = new();
+    private List<ApplicationUser> _availableUsers = new();
+
+    private Dictionary<int, int> _unreadCounts = new();
+
+    private int? _selectedConversationId = null;
+    private string _selectedConversationTitle = string.Empty;
+    private string _selectedUserId = string.Empty;
+    private string _newMessageText = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        _conversations = await _repo.GetUserConversationsAsync(_currentUserId);
+        _availableUsers = await _repo.GetAvailableUsersForChatAsync(_currentUserId);
+
+        _unreadCounts = new Dictionary<int, int>();
+        foreach (var conv in _conversations)
+        {
+            _unreadCounts[conv.Id] = await _repo.GetUnreadCountAsync(conv.Id, _currentUserId);
+        }
+
+        if (_selectedConversationId.HasValue)
+        {
+            _messages = await _repo.GetConversationMessagesAsync(_selectedConversationId.Value);
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task StartNewChat()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedUserId))
+        {
+            await _JS.ToastrError("اختر مستخدمًا أولًا");
+            return;
+        }
+
+        var conversationId = await _repo.CreatePrivateConversationAsync(_currentUserId, _selectedUserId);
+        _selectedUserId = string.Empty;
+
+        await Load();
+        await OpenConversation(conversationId);
+    }
+
+    private async Task OpenConversation(int conversationId)
+    {
+        _selectedConversationId = conversationId;
+
+        var conv = _conversations.FirstOrDefault(x => x.Id == conversationId);
+        _selectedConversationTitle = conv is null ? "المحادثة" : GetConversationDisplayName(conv);
+
+        _messages = await _repo.GetConversationMessagesAsync(conversationId);
+        await _repo.MarkConversationAsReadAsync(conversationId, _currentUserId);
+
+        if (_unreadCounts.ContainsKey(conversationId))
+            _unreadCounts[conversationId] = 0;
+
+        StateHasChanged();
+    }
+
+    private async Task SendMessage()
+    {
+        if (!_selectedConversationId.HasValue)
+        {
+            await _JS.ToastrError("اختر محادثة أولًا");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_newMessageText))
+            return;
+
+        await _repo.SendMessageAsync(_selectedConversationId.Value, _currentUserId, _newMessageText);
+        _newMessageText = string.Empty;
+
+        await _repo.MarkConversationAsReadAsync(_selectedConversationId.Value, _currentUserId);
+
+        await Load();
+        _messages = await _repo.GetConversationMessagesAsync(_selectedConversationId.Value);
+
+        StateHasChanged();
+    }
+
+    private int GetUnreadCount(int conversationId)
+    {
+        return _unreadCounts.TryGetValue(conversationId, out var count) ? count : 0;
+    }
+
+    private string GetConversationDisplayName(Conversation conv)
+    {
+        var other = conv.Participants
+            .FirstOrDefault(p => p.UserId != _currentUserId)?.User;
+
+        return other?.FullName ?? conv.Title;
+    }
+
+    private string GetLastMessagePreview(Conversation conv)
+    {
+        var msg = conv.Messages
+            .OrderByDescending(m => m.SentAt)
+            .FirstOrDefault();
+
+        if (msg is null)
+            return "لا توجد رسائل";
+
+        var sender = msg.SenderUserId == _currentUserId ? "أنت" : msg.SenderUser?.FullName;
+        var text = msg.MessageText ?? string.Empty;
+        text = text.Length > 28 ? text[..28] + "..." : text;
+
+        return $"{sender}: {text}";
+    }
+}
