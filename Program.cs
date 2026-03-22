@@ -33,6 +33,9 @@ builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
 builder.Services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
 builder.Services.AddScoped<IMeetingRequestRepository, MeetingRequestRepository>();
 builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+builder.Services.AddScoped<IOfficialExcuseRepository, OfficialExcuseRepository>();
+builder.Services.AddScoped<IGradeReviewRequestRepository, GradeReviewRequestRepository>();
+builder.Services.AddScoped<IAcademicNotificationRepository, AcademicNotificationRepository>();
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;

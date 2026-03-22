@@ -29,9 +29,11 @@
         public enum NotificationType
         {
             General = 1,
-            Warning = 2,
-            Reminder = 3,
-            Summon = 4
+            Announcement = 2,
+            MeetingRequest = 3,
+            OfficialExcuse = 4,
+            GradeReview = 5,
+            Appointment = 6
         }
 
         public enum RequestStatus
@@ -68,7 +70,9 @@
         public enum ConversationType
         {
             Private = 1,
-            Group = 2
+            Group = 2,
+            Course = 3,
+            Section = 4
         }
     }
 }
