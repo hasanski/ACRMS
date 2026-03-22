@@ -1,12 +1,16 @@
 ﻿@page "/chat"
 @using System.Security.Claims
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Components.Web
 @using ACRMS.Data
 @using ACRMS.Repository.IRepository
 @using Microsoft.AspNetCore.Authorization
 @inject IChatRepository _repo
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime _JS
+@inject NavigationManager NavigationManager
 @attribute [Authorize]
+@implements IAsyncDisposable
 
 <PageTitle>المحادثات</PageTitle>
 
@@ -64,6 +68,10 @@
         background: #fff;
         cursor: pointer;
         position: relative;
+        display: block;
+        width: 100%;
+        text-align: right;
+        outline: none;
     }
 
         .conversation-item.active {
@@ -89,7 +97,7 @@
         padding: 3px 8px;
     }
 
-    .messages-box {
+    /* .messages-box {
         flex: 1;
         border: 1px solid #ececec;
         border-radius: 14px;
@@ -98,6 +106,15 @@
         background: #fff;
         margin-bottom: 12px;
         min-height: 420px;
+    } */
+    .messages-box {
+        height: 420px;
+        overflow-y: auto;
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+        margin-bottom: 12px;
     }
 
     .message-row {
@@ -166,7 +183,7 @@
                         </select>
                     </div>
 
-                    <button class="btn btn-primary w-100" @onclick="StartNewChat">
+                    <button type="button" class="btn btn-primary w-100" @onclick="StartNewChat">
                         بدء محادثة
                     </button>
                 </div>
@@ -180,8 +197,9 @@
                         var active = _selectedConversationId == conv.Id ? "active" : "";
                         var unread = GetUnreadCount(conv.Id);
 
-                        <div class="conversation-item @active"
-                             @onclick="@(async () => await OpenConversation(conv.Id))">
+                        <button type="button"
+                                class="conversation-item @active"
+                                @onclick="@(async () => await OpenConversation(conv.Id))">
                             @if (unread > 0)
                             {
                                 <span class="unread-badge">@unread</span>
@@ -191,7 +209,7 @@
                             <div class="conversation-meta">
                                 @GetLastMessagePreview(conv)
                             </div>
-                        </div>
+                        </button>
                     }
                 }
                 else
@@ -205,7 +223,7 @@
                 {
                     <div class="sec-title">@_selectedConversationTitle</div>
 
-                    <div class="messages-box">
+                    <div class="messages-box" id="messagesBox">
                         @if (_messages.Any())
                         {
                             @foreach (var msg in _messages)
@@ -233,8 +251,10 @@
                         <div class="input-group">
                             <input class="form-control"
                                    @bind="_newMessageText"
+                                   @bind:event="oninput"
+                                   @onkeydown="HandleKeyDown"
                                    placeholder="اكتب رسالتك هنا..." />
-                            <button class="btn btn-success" @onclick="SendMessage">إرسال</button>
+                            <button type="button" class="btn btn-success" @onclick="SendMessage">إرسال</button>
                         </div>
                     </div>
                 }
@@ -263,11 +283,54 @@
     private string _selectedUserId = string.Empty;
     private string _newMessageText = string.Empty;
 
+    private HubConnection? _hubConnection;
+    private bool _shouldScrollToBottom = false;
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _currentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/chathub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On("ReceiveChatUpdate", async () =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await Load();
+
+                if (_selectedConversationId.HasValue)
+                {
+                    _messages = await _repo.GetConversationMessagesAsync(_selectedConversationId.Value);
+                }
+
+                _shouldScrollToBottom = true;
+                StateHasChanged();
+            });
+        });
+
+        try
+        {
+            await _hubConnection.StartAsync();
+        }
+        catch
+        {
+            await _JS.ToastrError("تعذر تشغيل التحديث الفوري للشات");
+        }
+
         await Load();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldScrollToBottom)
+        {
+            _shouldScrollToBottom = false;
+            await _JS.InvokeVoidAsync("chatHelpers.scrollToBottomById", "messagesBox");
+        }
     }
 
     private async Task Load()
@@ -285,23 +348,36 @@
         {
             _messages = await _repo.GetConversationMessagesAsync(_selectedConversationId.Value);
         }
+        else
+        {
+            _messages = new List<Message>();
+        }
 
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task StartNewChat()
     {
-        if (string.IsNullOrWhiteSpace(_selectedUserId))
+        try
         {
-            await _JS.ToastrError("اختر مستخدمًا أولًا");
-            return;
+            if (string.IsNullOrWhiteSpace(_selectedUserId))
+            {
+                await _JS.ToastrError("اختر مستخدمًا أولًا");
+                return;
+            }
+
+            var conversationId = await _repo.CreatePrivateConversationAsync(_currentUserId, _selectedUserId);
+            _selectedUserId = string.Empty;
+
+            _selectedConversationId = conversationId;
+
+            await Load();
+            await OpenConversation(conversationId);
         }
-
-        var conversationId = await _repo.CreatePrivateConversationAsync(_currentUserId, _selectedUserId);
-        _selectedUserId = string.Empty;
-
-        await Load();
-        await OpenConversation(conversationId);
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"فشل إنشاء المحادثة: {ex.Message}");
+        }
     }
 
     private async Task OpenConversation(int conversationId)
@@ -309,7 +385,16 @@
         _selectedConversationId = conversationId;
 
         var conv = _conversations.FirstOrDefault(x => x.Id == conversationId);
-        _selectedConversationTitle = conv is null ? "المحادثة" : GetConversationDisplayName(conv);
+
+        if (conv is null)
+        {
+            await Load();
+            conv = _conversations.FirstOrDefault(x => x.Id == conversationId);
+        }
+
+        _selectedConversationTitle = conv is null
+            ? "المحادثة"
+            : GetConversationDisplayName(conv);
 
         _messages = await _repo.GetConversationMessagesAsync(conversationId);
         await _repo.MarkConversationAsReadAsync(conversationId, _currentUserId);
@@ -317,7 +402,8 @@
         if (_unreadCounts.ContainsKey(conversationId))
             _unreadCounts[conversationId] = 0;
 
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
+        await _JS.InvokeVoidAsync("chatHelpers.scrollToBottomById", "messagesBox");
     }
 
     private async Task SendMessage()
@@ -339,7 +425,27 @@
         await Load();
         _messages = await _repo.GetConversationMessagesAsync(_selectedConversationId.Value);
 
-        StateHasChanged();
+        if (_hubConnection is not null)
+        {
+            try
+            {
+                await _hubConnection.SendAsync("BroadcastConversationUpdate", _selectedConversationId.Value);
+            }
+            catch
+            {
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await _JS.InvokeVoidAsync("chatHelpers.scrollToBottomById", "messagesBox");
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
     }
 
     private int GetUnreadCount(int conversationId)
@@ -369,5 +475,13 @@
         text = text.Length > 28 ? text[..28] + "..." : text;
 
         return $"{sender}: {text}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
     }
 }

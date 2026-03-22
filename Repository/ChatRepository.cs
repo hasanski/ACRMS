@@ -175,5 +175,13 @@ namespace ACRMS.Repository
 
             return messageIds.Count(id => !readIds.Contains(id));
         }
+        public async Task<List<string>> GetConversationParticipantIdsAsync(int conversationId)
+        {
+            return await _context.ConversationParticipants
+                .AsNoTracking()
+                .Where(p => p.ConversationId == conversationId)
+                .Select(p => p.UserId)
+                .ToListAsync();
+        }
     }
 }

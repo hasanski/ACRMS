@@ -15,5 +15,6 @@ namespace ACRMS.Repository.IRepository
         Task MarkConversationAsReadAsync(int conversationId, string userId);
 
         Task<int> GetUnreadCountAsync(int conversationId, string userId);
+        Task<List<string>> GetConversationParticipantIdsAsync(int conversationId);
     }
 }
