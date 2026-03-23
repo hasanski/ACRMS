@@ -1,0 +1,406 @@
+﻿@page "/dashboard"
+@using System.Security.Claims
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@inject IDashboardRepository _repo
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageTitle>لوحة التحكم</PageTitle>
+
+<style>
+    .wrap {
+        max-width: 1300px;
+        margin: auto;
+        padding: 20px;
+    }
+
+    .hero {
+        background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+        border: 1px solid #dfe9f8;
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+
+        .hero h2 {
+            margin: 0 0 8px 0;
+            font-weight: 900;
+            color: #1f3c88;
+        }
+
+        .hero p {
+            margin: 0;
+            color: #666;
+            font-size: 15px;
+        }
+
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+
+    @@media (max-width: 1000px) {
+        .cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .cards {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .stat-card {
+        background: #fff;
+        border: 1px solid #ececec;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.05);
+        cursor: pointer;
+        transition: all .2s ease;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(0,0,0,.08);
+        }
+
+    .card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+
+    .icon-box {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+    }
+
+    .stat-title {
+        color: #666;
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .stat-value {
+        font-size: 32px;
+        font-weight: 900;
+        color: #1f3c88;
+    }
+
+    .stat-link {
+        margin-top: 10px;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .theme-blue {
+        border-color: #dbe7ff;
+    }
+
+        .theme-blue:hover {
+            border-color: #b7d1ff;
+        }
+
+        .theme-blue .icon-box {
+            background: #eaf2ff;
+            color: #0d6efd;
+        }
+
+        .theme-blue .stat-link {
+            color: #0d6efd;
+        }
+
+    .theme-green {
+        border-color: #d9f1e3;
+    }
+
+        .theme-green:hover {
+            border-color: #b7e4c8;
+        }
+
+        .theme-green .icon-box {
+            background: #eafaf0;
+            color: #198754;
+        }
+
+        .theme-green .stat-link {
+            color: #198754;
+        }
+
+    .theme-orange {
+        border-color: #ffe7cc;
+    }
+
+        .theme-orange:hover {
+            border-color: #ffd59a;
+        }
+
+        .theme-orange .icon-box {
+            background: #fff4e8;
+            color: #fd7e14;
+        }
+
+        .theme-orange .stat-link {
+            color: #fd7e14;
+        }
+
+    .theme-red {
+        border-color: #f7d9dd;
+    }
+
+        .theme-red:hover {
+            border-color: #efb7c0;
+        }
+
+        .theme-red .icon-box {
+            background: #fdecef;
+            color: #dc3545;
+        }
+
+        .theme-red .stat-link {
+            color: #dc3545;
+        }
+
+    .theme-purple {
+        border-color: #eadcf7;
+    }
+
+        .theme-purple:hover {
+            border-color: #d6bdf3;
+        }
+
+        .theme-purple .icon-box {
+            background: #f4edff;
+            color: #6f42c1;
+        }
+
+        .theme-purple .stat-link {
+            color: #6f42c1;
+        }
+</style>
+
+<div class="wrap" dir="rtl">
+    <div class="hero">
+        <h2>لوحة التحكم</h2>
+        <p>ملخص سريع حسب صلاحيات المستخدم الحالية</p>
+    </div>
+
+    @if (_isAdmin)
+    {
+        <div class="cards">
+            <div class="stat-card theme-blue" @onclick='() => GoTo("/admin/users")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-people-fill"></i></div>
+                </div>
+                <div class="stat-title">عدد المستخدمين</div>
+                <div class="stat-value">@_admin.UsersCount</div>
+                <div class="stat-link">عرض المستخدمين</div>
+            </div>
+
+            <div class="stat-card theme-green" @onclick='() => GoTo("/departments")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-diagram-3-fill"></i></div>
+                </div>
+                <div class="stat-title">عدد الأقسام</div>
+                <div class="stat-value">@_admin.DepartmentsCount</div>
+                <div class="stat-link">عرض الأقسام</div>
+            </div>
+
+            <div class="stat-card theme-orange" @onclick='() => GoTo("/admin/courses")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-journal-bookmark-fill"></i></div>
+                </div>
+                <div class="stat-title">عدد المواد</div>
+                <div class="stat-value">@_admin.CoursesCount</div>
+                <div class="stat-link">عرض المواد</div>
+            </div>
+
+            <div class="stat-card theme-purple" @onclick='() => GoTo("/admin/sections")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-collection-fill"></i></div>
+                </div>
+                <div class="stat-title">عدد الشعب</div>
+                <div class="stat-value">@_admin.SectionsCount</div>
+                <div class="stat-link">عرض الشعب</div>
+            </div>
+
+            <div class="stat-card theme-red" @onclick='() => GoTo("/admin/enrollments")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-person-check-fill"></i></div>
+                </div>
+                <div class="stat-title">عدد التسجيلات</div>
+                <div class="stat-value">@_admin.EnrollmentsCount</div>
+                <div class="stat-link">عرض التسجيلات</div>
+            </div>
+
+            <div class="stat-card theme-blue" @onclick='() => GoTo("/admin/announcements")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-megaphone-fill"></i></div>
+                </div>
+                <div class="stat-title">عدد التعميمات</div>
+                <div class="stat-value">@_admin.AnnouncementsCount</div>
+                <div class="stat-link">عرض التعميمات</div>
+            </div>
+        </div>
+    }
+    else if (_isFaculty)
+    {
+        <div class="cards">
+            <div class="stat-card theme-orange" @onclick='() => GoTo("/faculty/meeting-requests")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-calendar-check-fill"></i></div>
+                </div>
+                <div class="stat-title">طلبات المواعيد المعلقة</div>
+                <div class="stat-value">@_faculty.PendingMeetingRequestsCount</div>
+                <div class="stat-link">عرض الطلبات</div>
+            </div>
+
+            <div class="stat-card theme-red" @onclick='() => GoTo("/faculty/official-excuses")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-file-earmark-medical-fill"></i></div>
+                </div>
+                <div class="stat-title">الأعذار الرسمية المعلقة</div>
+                <div class="stat-value">@_faculty.PendingOfficialExcusesCount</div>
+                <div class="stat-link">عرض الأعذار</div>
+            </div>
+
+            <div class="stat-card theme-purple" @onclick='() => GoTo("/faculty/grade-review-requests")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-clipboard-data-fill"></i></div>
+                </div>
+                <div class="stat-title">طلبات مراجعة العلامات المعلقة</div>
+                <div class="stat-value">@_faculty.PendingGradeReviewRequestsCount</div>
+                <div class="stat-link">عرض الطلبات</div>
+            </div>
+
+            <div class="stat-card theme-blue" @onclick='() => GoTo("/faculty/notifications")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-bell-fill"></i></div>
+                </div>
+                <div class="stat-title">التنبيهات غير المقروءة</div>
+                <div class="stat-value">@_faculty.UnreadNotificationsCount</div>
+                <div class="stat-link">عرض التنبيهات</div>
+            </div>
+
+            <div class="stat-card theme-green" @onclick='() => GoTo("/chat")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-chat-dots-fill"></i></div>
+                </div>
+                <div class="stat-title">المحادثات غير المقروءة</div>
+                <div class="stat-value">@_faculty.UnreadChatsCount</div>
+                <div class="stat-link">فتح المحادثات</div>
+            </div>
+        </div>
+    }
+    else if (_isStudent)
+    {
+        <div class="cards">
+            <div class="stat-card theme-orange" @onclick='() => GoTo("/student/meeting-requests")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-calendar-plus-fill"></i></div>
+                </div>
+                <div class="stat-title">طلبات المواعيد</div>
+                <div class="stat-value">@_student.MeetingRequestsCount</div>
+                <div class="stat-link">عرض الطلبات</div>
+            </div>
+
+            <div class="stat-card theme-red" @onclick='() => GoTo("/student/official-excuses")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-file-earmark-text-fill"></i></div>
+                </div>
+                <div class="stat-title">الأعذار الرسمية</div>
+                <div class="stat-value">@_student.OfficialExcusesCount</div>
+                <div class="stat-link">عرض الأعذار</div>
+            </div>
+
+            <div class="stat-card theme-purple" @onclick='() => GoTo("/student/grade-review-requests")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-journal-check"></i></div>
+                </div>
+                <div class="stat-title">طلبات مراجعة العلامات</div>
+                <div class="stat-value">@_student.GradeReviewRequestsCount</div>
+                <div class="stat-link">عرض الطلبات</div>
+            </div>
+
+            <div class="stat-card theme-blue" @onclick='() => GoTo("/student/announcements")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-megaphone-fill"></i></div>
+                </div>
+                <div class="stat-title">التعميمات المستلمة</div>
+                <div class="stat-value">@_student.AnnouncementsCount</div>
+                <div class="stat-link">عرض التعميمات</div>
+            </div>
+
+            <div class="stat-card theme-green" @onclick='() => GoTo("/student/notifications")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-bell-fill"></i></div>
+                </div>
+                <div class="stat-title">التنبيهات غير المقروءة</div>
+                <div class="stat-value">@_student.UnreadNotificationsCount</div>
+                <div class="stat-link">عرض التنبيهات</div>
+            </div>
+
+            <div class="stat-card theme-blue" @onclick='() => GoTo("/chat")'>
+                <div class="card-top">
+                    <div class="icon-box"><i class="bi bi-chat-dots-fill"></i></div>
+                </div>
+                <div class="stat-title">المحادثات غير المقروءة</div>
+                <div class="stat-value">@_student.UnreadChatsCount</div>
+                <div class="stat-link">فتح المحادثات</div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isAdmin;
+    private bool _isFaculty;
+    private bool _isStudent;
+    private string _userId = string.Empty;
+
+    private AdminDashboardDto _admin = new();
+    private FacultyDashboardDto _faculty = new();
+    private StudentDashboardDto _student = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+        _isAdmin = user.IsInRole("Admin");
+        _isFaculty = user.IsInRole("Faculty");
+        _isStudent = user.IsInRole("Student");
+
+        if (_isAdmin)
+        {
+            _admin = await _repo.GetAdminDashboardAsync();
+        }
+        else if (_isFaculty)
+        {
+            _faculty = await _repo.GetFacultyDashboardAsync(_userId);
+        }
+        else if (_isStudent)
+        {
+            _student = await _repo.GetStudentDashboardAsync(_userId);
+        }
+    }
+
+    private void GoTo(string url)
+    {
+        NavigationManager.NavigateTo(url);
+    }
+}
