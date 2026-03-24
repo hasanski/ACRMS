@@ -165,5 +165,32 @@ namespace ACRMS.Repository
             await _context.SaveChangesAsync();
         }
 
+        public async Task<List<AnnouncementRecipient>> GetStudentAnnouncementsAsync(string studentId)
+        {
+            return await _context.AnnouncementRecipients
+                .AsNoTracking()
+                .Include(ar => ar.Announcement)
+                    .ThenInclude(a => a.Faculty)
+                .Include(ar => ar.Announcement)
+                    .ThenInclude(a => a.Course)
+                .Include(ar => ar.Announcement)
+                    .ThenInclude(a => a.Section)
+                .Where(ar => ar.StudentId == studentId)
+                .OrderByDescending(ar => ar.Announcement!.PublishedAt)
+                .ToListAsync();
+        }
+
+        public async Task MarkAnnouncementAsReadAsync(int recipientId)
+        {
+            var item = await _context.AnnouncementRecipients.FirstOrDefaultAsync(x => x.Id == recipientId);
+
+            if (item is not null && !item.IsRead)
+            {
+                item.IsRead = true;
+                item.ReadAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+        }
+
     }
 }

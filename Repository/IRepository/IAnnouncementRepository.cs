@@ -24,5 +24,7 @@ namespace ACRMS.Repository.IRepository
             string? targetStudentId);
 
         Task CreateRecipientsAsync(int announcementId, List<string> studentIds);
+        Task<List<AnnouncementRecipient>> GetStudentAnnouncementsAsync(string studentId);
+        Task MarkAnnouncementAsReadAsync(int recipientId);
     }
 }

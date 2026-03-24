@@ -147,7 +147,7 @@
             <div class="section">
                 <div class="sec-title">@(_editMode ? "تعديل شعبة" : "إضافة شعبة جديدة")</div>
 
-                <EditForm EditContext="_editContext" OnValidSubmit="Save">
+                <EditForm EditContext="_editContext" OnValidSubmit="Save" FormName="SectionForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
@@ -196,6 +196,17 @@
                             <ValidationMessage For="@(() => _form.CourseId)" />
                         </div>
 
+                        <div>
+                            <label class="form-label">المدرس</label>
+                            <InputSelect class="form-control" @bind-Value="_form.FacultyMemberId" disabled="@(!_filteredFacultyMembers.Any())">
+                                <option value="">-- اختر المدرس --</option>
+                                @foreach (var facultyMember in _filteredFacultyMembers)
+                                {
+                                    <option value="@facultyMember.Id">@facultyMember.FullName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
                         <div style="grid-column: 1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
                             <button type="submit" class="btn btn-primary" disabled="@_saving">
                                 @(_saving ? "جارٍ الحفظ..." : (_editMode ? "حفظ التعديل" : "إضافة"))
@@ -220,7 +231,7 @@
                 <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 180px;">
                     <div>
                         <label class="form-label">بحث</label>
-                        <input class="form-control" @bind="_q" @bind:event="oninput" placeholder="ابحث باسم الشعبة أو المادة..." />
+                        <input class="form-control" @bind="_q" @bind:event="oninput" placeholder="ابحث باسم الشعبة أو المادة أو المدرس..." />
                     </div>
 
                     <div>
@@ -264,6 +275,7 @@
                                     <th>اسم الشعبة</th>
                                     <th>المادة</th>
                                     <th>رمز المادة</th>
+                                    <th>المدرس</th>
                                     <th>الكلية</th>
                                     <th>القسم</th>
                                     <th style="width:220px;"></th>
@@ -277,6 +289,7 @@
                                         <td>@x.SectionName</td>
                                         <td>@x.Course?.CourseName</td>
                                         <td>@x.Course?.CourseCode</td>
+                                        <td>@(x.FacultyMember?.FullName ?? "-")</td>
                                         <td>@x.Course?.Department?.FacultyName</td>
                                         <td>@x.Course?.Department?.Name</td>
                                         <td class="text-end">
@@ -316,6 +329,8 @@
         [Required(ErrorMessage = "المادة مطلوبة")]
         [Range(1, int.MaxValue, ErrorMessage = "اختر المادة")]
         public int? CourseId { get; set; }
+
+        public string? FacultyMemberId { get; set; }
     }
 
     private ConfirmationModal? _deleteModal;
@@ -330,6 +345,7 @@
     private List<Section> _items = new();
     private List<Department> _departments = new();
     private List<Course> _courses = new();
+    private List<ApplicationUser> _facultyMembers = new();
 
     private List<string> _faculties = new();
     private List<Department> _filteredDepartments = new();
@@ -344,6 +360,7 @@
 
     private SectionForm _form = new();
     private EditContext _editContext = default!;
+    private List<ApplicationUser> _filteredFacultyMembers = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -360,6 +377,27 @@
         _selectedDepartmentId = null;
         _filteredDepartments = new();
         _filteredCourses = new();
+        _filteredFacultyMembers = new();
+    }
+    private void ApplyFacultyMembersFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedFacultyName))
+        {
+            _filteredFacultyMembers = new();
+            _form.FacultyMemberId = null;
+            return;
+        }
+
+        _filteredFacultyMembers = _facultyMembers
+            .Where(f => f.Department != null && f.Department.FacultyName == _selectedFacultyName)
+            .OrderBy(f => f.FullName)
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(_form.FacultyMemberId) &&
+            !_filteredFacultyMembers.Any(f => f.Id == _form.FacultyMemberId))
+        {
+            _form.FacultyMemberId = null;
+        }
     }
 
     private async Task Load()
@@ -367,6 +405,7 @@
         _items = await _repo.ListAsync();
         _departments = await _repo.GetDepartmentsAsync();
         _courses = await _repo.GetCoursesAsync();
+        _facultyMembers = await _repo.GetFacultyMembersAsync();
 
         _faculties = _departments
             .Where(d => !string.IsNullOrWhiteSpace(d.FacultyName))
@@ -377,6 +416,7 @@
 
         ApplyDepartmentFilter();
         ApplyCourseFilter();
+        ApplyFacultyMembersFilter();
         ApplyTableDepartmentFilter();
 
         StateHasChanged();
@@ -441,8 +481,11 @@
         _selectedFacultyName = e.Value?.ToString() ?? string.Empty;
         _selectedDepartmentId = null;
         _form.CourseId = null;
+        _form.FacultyMemberId = null;
+
         ApplyDepartmentFilter();
         ApplyCourseFilter();
+        ApplyFacultyMembersFilter();
         return Task.CompletedTask;
     }
 
@@ -476,7 +519,8 @@
             q = q.Where(x =>
                 (x.SectionName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
                 (x.Course?.CourseName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
-                (x.Course?.CourseCode ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase));
+                (x.Course?.CourseCode ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.FacultyMember?.FullName ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(_tableFacultyFilter))
@@ -497,7 +541,6 @@
     private Task StartEdit(Section x)
     {
         _editMode = true;
-
         _selectedFacultyName = x.Course?.Department?.FacultyName ?? string.Empty;
         _selectedDepartmentId = x.Course?.DepartmentId;
 
@@ -505,13 +548,15 @@
         {
             Id = x.Id,
             SectionName = x.SectionName,
-            CourseId = x.CourseId
+            CourseId = x.CourseId,
+            FacultyMemberId = x.FacultyMemberId
         };
 
         _editContext = new EditContext(_form);
 
         ApplyDepartmentFilter();
         ApplyCourseFilter();
+        ApplyFacultyMembersFilter();
 
         return Task.CompletedTask;
     }
@@ -539,7 +584,8 @@
                 {
                     Id = _form.Id.Value,
                     SectionName = sectionName,
-                    CourseId = _form.CourseId.Value
+                    CourseId = _form.CourseId.Value,
+                    FacultyMemberId = string.IsNullOrWhiteSpace(_form.FacultyMemberId) ? null : _form.FacultyMemberId
                 });
 
                 await _JS.ToastrSuccess("تم تعديل الشعبة بنجاح");
@@ -549,7 +595,8 @@
                 await _repo.CreateAsync(new Section
                 {
                     SectionName = sectionName,
-                    CourseId = _form.CourseId.Value
+                    CourseId = _form.CourseId.Value,
+                    FacultyMemberId = string.IsNullOrWhiteSpace(_form.FacultyMemberId) ? null : _form.FacultyMemberId
                 });
 
                 await _JS.ToastrSuccess("تمت إضافة الشعبة بنجاح");

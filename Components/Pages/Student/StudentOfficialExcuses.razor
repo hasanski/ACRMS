@@ -8,6 +8,8 @@
 @inject IOfficialExcuseRepository _repo
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime _JS
+@using Microsoft.AspNetCore.Components.Forms
+@inject IFileUploadService _fileUploadService
 @attribute [Authorize(Roles = "Student")]
 
 <ConfirmationModal @ref="_deleteModal"
@@ -173,8 +175,12 @@
                         </div>
 
                         <div style="grid-column:1 / -1;">
-                            <label class="form-label">مسار المرفق (اختياري حاليًا)</label>
-                            <InputText class="form-control" @bind-Value="_form.AttachmentPath" />
+                            <label class="form-label">المرفق (اختياري)</label>
+                            <InputFile OnChange="OnFileSelected" class="form-control" />
+                            @if (!string.IsNullOrWhiteSpace(_selectedFileName))
+                            {
+                                <div class="text-muted mt-1">الملف المختار: @_selectedFileName</div>
+                            }
                         </div>
 
                         <div style="grid-column:1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
@@ -242,7 +248,10 @@
                                             <strong>الوصف:</strong> @item.Description
                                             @if (!string.IsNullOrWhiteSpace(item.AttachmentPath))
                                             {
-                                                <div class="mt-1"><strong>المرفق:</strong> @item.AttachmentPath</div>
+                                                <div class="mt-1">
+                                                    <strong>المرفق:</strong>
+                                                    <a href="@item.AttachmentPath" target="_blank">فتح المرفق</a>
+                                                </div>
                                             }
                                         </td>
                                     </tr>
@@ -273,15 +282,15 @@
         [Required(ErrorMessage = "وصف العذر مطلوب")]
         public string? Description { get; set; }
 
-        [MaxLength(500)]
         public string? AttachmentPath { get; set; }
     }
-
+    private IBrowserFile? _selectedFile;
+    private string? _selectedFileName;
     private ConfirmationModal? _deleteModal;
     private int _deleteExcuseId;
     private string _deleteExcuseTitle = string.Empty;
     private string _deleteMessage => $"هل أنت متأكد من حذف العذر \"{_deleteExcuseTitle}\"؟";
-
+    private readonly string[] _allowedExtensions = { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" };
     private bool _saving = false;
     private string _studentId = string.Empty;
 
@@ -308,6 +317,8 @@
     {
         _form = new OfficialExcuseForm();
         _editContext = new EditContext(_form);
+        _selectedFile = null;
+        _selectedFileName = null;
     }
 
     private async Task Load()
@@ -324,7 +335,25 @@
 
         try
         {
+            if (_selectedFile is not null)
+            {
+                var extension = Path.GetExtension(_selectedFile.Name).ToLowerInvariant();
+
+                if (!_allowedExtensions.Contains(extension))
+                {
+                    await _JS.ToastrError("نوع الملف غير مسموح");
+                    _saving = false;
+                    return;
+                }
+            }
             var referenceNumber = await _repo.GenerateReferenceNumberAsync();
+
+            string? uploadedPath = null;
+
+            if (_selectedFile is not null)
+            {
+                uploadedPath = await _fileUploadService.UploadAsync(_selectedFile, "official-excuses");
+            }
 
             await _repo.CreateAsync(new OfficialExcuse
             {
@@ -333,13 +362,15 @@
                 FacultyId = _form.FacultyId!,
                 Title = (_form.Title ?? string.Empty).Trim(),
                 Description = (_form.Description ?? string.Empty).Trim(),
-                AttachmentPath = string.IsNullOrWhiteSpace(_form.AttachmentPath) ? null : _form.AttachmentPath.Trim(),
+                AttachmentPath = uploadedPath,
                 Status = RequestStatus.Pending,
                 SubmittedAt = DateTime.UtcNow
             });
 
             await _JS.ToastrSuccess("تم إرسال العذر بنجاح");
             ResetForm();
+            _selectedFile = null;
+            _selectedFileName = null;
             await Load();
         }
         catch (Exception ex)
@@ -390,4 +421,9 @@
         RequestStatus.Rejected => "pill-rejected",
         _ => "pill-pending"
     };
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _selectedFileName = _selectedFile?.Name;
+    }
 }

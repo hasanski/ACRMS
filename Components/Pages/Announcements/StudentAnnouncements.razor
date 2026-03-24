@@ -1,0 +1,320 @@
+﻿@page "/student/announcements"
+@using System.Security.Claims
+@using ACRMS.Data
+@using ACRMS.Repository.IRepository
+@using Microsoft.AspNetCore.Authorization
+@using static ACRMS.Data.Enums
+@inject IAnnouncementRepository _repo
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime _JS
+@attribute [Authorize(Roles = "Student")]
+
+<PageTitle>التعميمات</PageTitle>
+
+<style>
+    .wrap {
+        max-width: 1200px;
+        margin: auto;
+        padding: 16px;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .head {
+        padding: 14px 16px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(180deg,#fff 0%,#fafafa 100%);
+    }
+
+    .title {
+        margin: 0;
+        font-weight: 900;
+        font-size: 18px;
+    }
+
+    .badge-soft {
+        background: #f3f6ff;
+        border: 1px solid #dfe8ff;
+        color: #0d6efd;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .body {
+        padding: 16px;
+    }
+
+    .section {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .sec-title {
+        font-weight: 900;
+        margin: 0 0 12px 0;
+        font-size: 15px;
+        color: #222;
+    }
+
+    .announcement-card {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+        background: #fff;
+        transition: all .2s ease;
+    }
+
+    .announcement-unread {
+        border-right: 4px solid #0d6efd;
+        background: #f8fbff;
+    }
+
+    .announcement-expanded {
+        background: #f3f6fa;
+        border-color: #cfd8e3;
+        box-shadow: inset 0 0 0 1px #e3eaf2;
+    }
+
+    .meta {
+        color: #666;
+        font-size: 13px;
+        margin-top: 8px;
+    }
+
+    .pill {
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+        border: 1px solid #eee;
+        display: inline-block;
+    }
+
+    .pill-high {
+        background: #fff3cd;
+        border-color: #ffe69c;
+        color: #856404;
+    }
+
+    .pill-urgent {
+        background: #f8d7da;
+        border-color: #f1aeb5;
+        color: #842029;
+    }
+
+    .pill-normal {
+        background: #e7f1ff;
+        border-color: #b6d4fe;
+        color: #084298;
+    }
+
+    .empty-box {
+        text-align: center;
+        padding: 24px;
+        border: 1px dashed #d9d9d9;
+        border-radius: 14px;
+        background: #fafafa;
+        color: #666;
+        font-size: 15px;
+    }
+
+    .content-preview {
+        color: #444;
+        margin-top: 8px;
+    }
+
+    .content-full {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed #ddd;
+        line-height: 1.8;
+    }
+</style>
+
+<div class="wrap" dir="rtl">
+    <div class="card">
+        <div class="head">
+            <h3 class="title">التعميمات</h3>
+            <span class="badge-soft">المستلمة: @_items.Count</span>
+        </div>
+
+        <div class="body">
+            <div class="section">
+                <div class="sec-title">التعميمات المستلمة</div>
+
+                <div class="mb-3">
+                    <input class="form-control"
+                           @bind="_q"
+                           @bind:event="oninput"
+                           placeholder="ابحث بعنوان التعميم أو محتواه..." />
+                </div>
+
+                @if (Filtered().Any())
+                {
+                    @foreach (var item in Filtered())
+                    {
+                        var ann = item.Announcement!;
+                        var expanded = _expandedRecipientId == item.Id;
+
+                        <div class="announcement-card @(item.IsRead ? "" : "announcement-unread") @(expanded ? "announcement-expanded" : "")">
+                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                <div>
+                                    <h5 style="margin:0;">@ann.Title</h5>
+                                </div>
+
+                                <div>
+                                    <span class="pill @GetPriorityClass(ann.Priority)">
+                                        @GetPriorityText(ann.Priority)
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="content-preview">
+                                @(ann.Content?.Length > 140
+                                                        ? ann.Content[..140] + "..."
+                                                        : ann.Content)
+                    </div>
+
+                            <div class="meta">
+                                الناشر: @ann.Faculty?.FullName |
+                                التاريخ: @ann.PublishedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                        @if (ann.IsImportant)
+                                {
+                                    <span> | مهم</span>
+                                }
+                                @if (!item.IsRead)
+                                {
+                                    <span> | جديد</span>
+                                }
+                            </div>
+
+                            <div class="mt-3 d-flex gap-2 flex-wrap">
+                                <button type="button"
+                                        class="btn btn-sm @(expanded ? "btn-primary" : "btn-outline-primary")"
+                                        @onclick="() => ToggleDetails(item)">
+                                    @(expanded ? "إخفاء التفاصيل" : "عرض التفاصيل")
+                                </button>
+
+                                @if (!string.IsNullOrWhiteSpace(ann.AttachmentPath))
+                                {
+                                    <a href="@ann.AttachmentPath" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        فتح المرفق
+                                    </a>
+                                }
+                            </div>
+
+                            @if (expanded)
+                            {
+                                <div class="content-full">
+                                    <strong>محتوى التعميم:</strong>
+                                    <div class="mt-2">@ann.Content</div>
+
+                                    @if (ann.ExpireAt.HasValue)
+                                    {
+                                        <div class="meta mt-2">
+                                            ينتهي بتاريخ: @ann.ExpireAt.Value.ToLocalTime().ToString("yyyy-MM-dd")
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-box">
+                        لا توجد تعميمات حاليًا.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _studentId = string.Empty;
+    private string _q = string.Empty;
+    private int? _expandedRecipientId = null;
+    private List<AnnouncementRecipient> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _studentId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        _items = await _repo.GetStudentAnnouncementsAsync(_studentId);
+        StateHasChanged();
+    }
+
+    private IEnumerable<AnnouncementRecipient> Filtered()
+    {
+        IEnumerable<AnnouncementRecipient> q = _items;
+
+        if (!string.IsNullOrWhiteSpace(_q))
+        {
+            var s = _q.Trim();
+
+            q = q.Where(x =>
+                (x.Announcement?.Title ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.Announcement?.Content ?? string.Empty).Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return q.OrderByDescending(x => x.Announcement!.PublishedAt);
+    }
+
+    private async Task ToggleDetails(AnnouncementRecipient item)
+    {
+        if (_expandedRecipientId == item.Id)
+        {
+            _expandedRecipientId = null;
+            return;
+        }
+
+        _expandedRecipientId = item.Id;
+
+        if (!item.IsRead)
+        {
+            await _repo.MarkAnnouncementAsReadAsync(item.Id);
+            item.IsRead = true;
+            item.ReadAt = DateTime.UtcNow;
+        }
+
+        StateHasChanged();
+    }
+
+    private static string GetPriorityText(AnnouncementPriority priority) => priority switch
+    {
+        AnnouncementPriority.Low => "منخفضة",
+        AnnouncementPriority.Normal => "عادية",
+        AnnouncementPriority.High => "عالية",
+        AnnouncementPriority.Urgent => "عاجلة",
+        _ => priority.ToString()
+    };
+
+    private static string GetPriorityClass(AnnouncementPriority priority) => priority switch
+    {
+        AnnouncementPriority.High => "pill-high",
+        AnnouncementPriority.Urgent => "pill-urgent",
+        _ => "pill-normal"
+    };
+}

@@ -1,13 +1,16 @@
 ﻿@page "/announcements"
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
 @using ACRMS.Data
 @using ACRMS.Repository.IRepository
+@using ACRMS.Services
 @using Microsoft.AspNetCore.Authorization
 @using static ACRMS.Data.Enums
 @inject IAnnouncementRepository _repo
 @inject IUserManagementRepository _userRepo
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime _JS
+@inject IFileUploadService _fileUploadService
 @attribute [Authorize(Roles = "Admin,Faculty")]
 
 <ConfirmationModal @ref="_deleteModal"
@@ -151,7 +154,7 @@
             <div class="section">
                 <div class="sec-title">إنشاء تعميم جديد</div>
 
-                <EditForm EditContext="_editContext" OnValidSubmit="Save">
+                <EditForm EditContext="_editContext" OnValidSubmit="Save" FormName="AnnouncementForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
@@ -266,6 +269,15 @@
                             <span class="ms-2">نعم</span>
                         </div>
 
+                        <div style="grid-column:1 / -1;">
+                            <label class="form-label">المرفق (اختياري)</label>
+                            <InputFile OnChange="OnFileSelected" class="form-control" />
+                            @if (!string.IsNullOrWhiteSpace(_selectedFileName))
+                            {
+                                <div class="text-muted mt-1">الملف المختار: @_selectedFileName</div>
+                            }
+                        </div>
+
                         <div style="grid-column: 1 / -1; display:flex; gap:10px; flex-wrap:wrap;">
                             <button type="submit" class="btn btn-primary" disabled="@_saving">
                                 @(_saving ? "جارٍ الحفظ..." : "نشر التعميم")
@@ -319,6 +331,7 @@
                                     <th>الأولوية</th>
                                     <th>الناشر</th>
                                     <th>التاريخ</th>
+                                    <th>المرفق</th>
                                     <th style="width:120px;"></th>
                                 </tr>
                             </thead>
@@ -337,6 +350,18 @@
                                         </td>
                                         <td>@item.Faculty?.FullName</td>
                                         <td>@item.PublishedAt.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(item.AttachmentPath))
+                                            {
+                                                <a href="@item.AttachmentPath" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    فتح المرفق
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">لا يوجد</span>
+                                            }
+                                        </td>
                                         <td class="text-end">
                                             <button class="btn btn-outline-danger btn-sm"
                                                     @onclick="@(async () => await AskDelete(item.Id, title))">
@@ -378,6 +403,8 @@
 
         public DateTime? ExpireAt { get; set; }
         public bool IsImportant { get; set; } = false;
+
+        public string? AttachmentPath { get; set; }
     }
 
     private ConfirmationModal? _deleteModal;
@@ -407,6 +434,11 @@
     private AnnouncementForm _form = new();
     private EditContext _editContext = default!;
 
+    private IBrowserFile? _selectedFile;
+    private string? _selectedFileName;
+
+    private readonly string[] _allowedExtensions = { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" };
+
     protected override async Task OnInitializedAsync()
     {
         ResetForm();
@@ -424,6 +456,15 @@
         _filteredDepartments = new();
         _filteredCourses = new();
         _filteredSections = new();
+
+        _selectedFile = null;
+        _selectedFileName = null;
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _selectedFileName = _selectedFile?.Name;
     }
 
     private async Task Load()
@@ -596,6 +637,22 @@
                 return;
             }
 
+            string? uploadedPath = null;
+
+            if (_selectedFile is not null)
+            {
+                var extension = Path.GetExtension(_selectedFile.Name).ToLowerInvariant();
+
+                if (!_allowedExtensions.Contains(extension))
+                {
+                    await _JS.ToastrError("نوع الملف غير مسموح");
+                    _saving = false;
+                    return;
+                }
+
+                uploadedPath = await _fileUploadService.UploadAsync(_selectedFile, "announcements");
+            }
+
             var announcement = new Announcement
             {
                 Title = (_form.Title ?? string.Empty).Trim(),
@@ -608,6 +665,7 @@
                 Priority = _form.Priority,
                 ExpireAt = _form.ExpireAt,
                 IsImportant = _form.IsImportant,
+                AttachmentPath = uploadedPath,
                 PublishedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow
             };

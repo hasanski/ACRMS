@@ -17,6 +17,9 @@
 
   <ItemGroup>
     <Folder Include="ViewModels\" />
+    <Folder Include="wwwroot\uploads\announcements\" />
+    <Folder Include="wwwroot\uploads\chat\" />
+    <Folder Include="wwwroot\uploads\official-excuses\" />
   </ItemGroup>
 
 </Project>

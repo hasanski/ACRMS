@@ -104,6 +104,114 @@
         border-color: #f1aeb5;
         color: #842029;
     }
+
+    .modal-backdrop-custom {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+        padding: 16px;
+        backdrop-filter: blur(2px);
+    }
+
+    .modal-card-custom {
+        width: 100%;
+        max-width: 560px;
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,.18);
+        border: 1px solid #ececec;
+        overflow: hidden;
+        animation: popIn .18s ease-out;
+    }
+
+    .modal-head-custom {
+        padding: 16px 18px;
+        border-bottom: 1px solid #f0f0f0;
+        background: linear-gradient(180deg, #fff 0%, #fafafa 100%);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .modal-title-custom {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 900;
+        color: #222;
+    }
+
+    .modal-body-custom {
+        padding: 18px;
+    }
+
+    .modal-text-custom {
+        color: #555;
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+
+    .modal-footer-custom {
+        padding: 14px 18px;
+        border-top: 1px solid #f0f0f0;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        background: #fcfcfc;
+    }
+
+    .reject-textarea {
+        min-height: 130px;
+        resize: vertical;
+        border-radius: 14px;
+        border: 1px solid #dcdcdc;
+        padding: 12px 14px;
+        font-size: 14px;
+        box-shadow: none;
+    }
+
+        .reject-textarea:focus {
+            border-color: #f0ad4e;
+            box-shadow: 0 0 0 0.2rem rgba(240, 173, 78, 0.15);
+            outline: none;
+        }
+
+    .reject-error {
+        color: #b42318;
+        font-size: 13px;
+        margin-top: 8px;
+        font-weight: 700;
+    }
+
+    .btn-soft-secondary {
+        border-radius: 12px;
+        padding: 8px 18px;
+        font-weight: 700;
+    }
+
+    .btn-reject-confirm {
+        border-radius: 12px;
+        padding: 8px 18px;
+        font-weight: 800;
+    }
+
+    @@keyframes popIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(8px) scale(.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    }
 </style>
 
 <div class="wrap" dir="rtl">
@@ -139,7 +247,7 @@
                                         <td>@item.Student?.FullName</td>
                                         <td>@item.Title</td>
                                         <td>@item.Description</td>
-                                        <td>@item.AttachmentPath</td>
+                                        <td><a href="@item.AttachmentPath" target="_blank">فتح المرفق</a></td>
                                         <td>
                                             <span class="pill @GetStatusClass(item.Status)">
                                                 @GetStatusText(item.Status)
@@ -155,7 +263,7 @@
                                                 </button>
 
                                                 <button class="btn btn-outline-warning btn-sm"
-                                                        @onclick="@(async () => await PromptReject(item.Id))">
+                                                        @onclick="() => OpenRejectDialog(item.Id)">
                                                     رفض
                                                 </button>
                                             }
@@ -175,10 +283,87 @@
     </div>
 </div>
 
+@if (_showRejectDialog)
+{
+    <div class="modal-backdrop-custom" dir="rtl">
+        <div class="modal-card-custom">
+            <div class="modal-head-custom">
+                <h5 class="modal-title-custom">رفض العذر الرسمي</h5>
+                <button type="button" class="btn-close" @onclick="CloseRejectDialog"></button>
+            </div>
+
+            <div class="modal-body-custom">
+                <div class="modal-text-custom">
+                    الرجاء إدخال سبب الرفض بشكل واضح ليظهر للطالب.
+                </div>
+
+                <textarea class="form-control reject-textarea"
+                          placeholder="اكتب سبب الرفض هنا..."
+                          @bind="_rejectReason"></textarea>
+
+                @if (_showRejectValidation)
+                {
+                    <div class="reject-error">سبب الرفض مطلوب.</div>
+                }
+            </div>
+
+            <div class="modal-footer-custom">
+                <button class="btn btn-light btn-soft-secondary" @onclick="CloseRejectDialog">
+                    إلغاء
+                </button>
+
+                <button class="btn btn-warning btn-reject-confirm" @onclick="ConfirmRejectAsync">
+                    تأكيد الرفض
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private string _facultyId = string.Empty;
     private List<OfficialExcuse> _items = new();
+    private bool _showRejectDialog;
+    private bool _showRejectValidation;
+    private int _selectedRejectId;
+    private string _rejectReason = string.Empty;
 
+    private void OpenRejectDialog(int id)
+    {
+        _selectedRejectId = id;
+        _rejectReason = string.Empty;
+        _showRejectValidation = false;
+        _showRejectDialog = true;
+    }
+
+    private void CloseRejectDialog()
+    {
+        _showRejectDialog = false;
+        _showRejectValidation = false;
+        _selectedRejectId = 0;
+        _rejectReason = string.Empty;
+    }
+
+    private async Task ConfirmRejectAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_rejectReason))
+        {
+            _showRejectValidation = true;
+            return;
+        }
+
+        try
+        {
+            await _repo.UpdateStatusAsync(_selectedRejectId, RequestStatus.Rejected, _rejectReason.Trim());
+            await _JS.ToastrSuccess("تم رفض العذر");
+            CloseRejectDialog();
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"تعذر تحديث الحالة: {ex.Message}");
+        }
+    }
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -206,22 +391,22 @@
         }
     }
 
-    private async Task PromptReject(int id)
-    {
-        var response = await _JS.InvokeAsync<string>("prompt", "أدخل سبب الرفض:", "تم رفض العذر");
-        if (response is null) return;
+    // private async Task PromptReject(int id)
+    // {
+    //     var response = await _JS.InvokeAsync<string>("prompt", "أدخل سبب الرفض:", "تم رفض العذر");
+    //     if (response is null) return;
 
-        try
-        {
-            await _repo.UpdateStatusAsync(id, RequestStatus.Rejected, response);
-            await _JS.ToastrSuccess("تم رفض العذر");
-            await Load();
-        }
-        catch (Exception ex)
-        {
-            await _JS.ToastrError($"تعذر تحديث الحالة: {ex.Message}");
-        }
-    }
+    //     try
+    //     {
+    //         await _repo.UpdateStatusAsync(id, RequestStatus.Rejected, response);
+    //         await _JS.ToastrSuccess("تم رفض العذر");
+    //         await Load();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await _JS.ToastrError($"تعذر تحديث الحالة: {ex.Message}");
+    //     }
+    // }
 
     private static string GetStatusText(RequestStatus status) => status switch
     {

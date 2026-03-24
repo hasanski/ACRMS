@@ -38,6 +38,7 @@ builder.Services.AddScoped<IGradeReviewRequestRepository, GradeReviewRequestRepo
 builder.Services.AddScoped<IAcademicNotificationRepository, AcademicNotificationRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;

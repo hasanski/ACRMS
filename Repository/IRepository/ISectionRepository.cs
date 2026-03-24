@@ -15,5 +15,6 @@ namespace ACRMS.Repository.IRepository
 
         Task<List<Department>> GetDepartmentsAsync();
         Task<List<Course>> GetCoursesAsync();
+        Task<List<ApplicationUser>> GetFacultyMembersAsync();
     }
 }

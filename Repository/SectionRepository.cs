@@ -13,14 +13,45 @@ namespace ACRMS.Repository
             _context = context;
         }
 
+        //public async Task<List<Section>> ListAsync()
+        //{
+        //    return await _context.Sections
+        //        .AsNoTracking()
+        //        .Include(s => s.Course)
+        //        .ThenInclude(c => c!.Department)
+        //        .OrderByDescending(s => s.Id)
+        //        .ToListAsync();
+        //}
         public async Task<List<Section>> ListAsync()
         {
             return await _context.Sections
-                .AsNoTracking()
-                .Include(s => s.Course)
-                .ThenInclude(c => c!.Department)
-                .OrderByDescending(s => s.Id)
+                .Include(x => x.Course)
+                    .ThenInclude(c => c!.Department)
+                .Include(x => x.FacultyMember)
+                .OrderByDescending(x => x.Id)
                 .ToListAsync();
+        }
+        //public async Task<List<ApplicationUser>> GetFacultyMembersAsync()
+        //{
+        //    return await _context.Users
+        //        .Include(x => x.Department)
+        //        .Where(x => x.IsActive)
+        //        .Where(x => _context.UserRoles.Any(ur => ur.UserId == x.Id && ur.))
+        //        .OrderBy(x => x.FullName)
+        //        .ToListAsync();
+        //}
+        public async Task<List<ApplicationUser>> GetFacultyMembersAsync()
+        {
+            return await (
+                from user in _context.Users
+                join userRole in _context.UserRoles on user.Id equals userRole.UserId
+                join role in _context.Roles on userRole.RoleId equals role.Id
+                where user.IsActive && role.Name == "Faculty"
+                select user
+            )
+            .Include(x => x.Department)
+            .OrderBy(x => x.FullName)
+            .ToListAsync();
         }
 
         public async Task<Section?> GetByIdAsync(int id)
