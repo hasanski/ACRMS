@@ -16,5 +16,6 @@ namespace ACRMS.Repository.IRepository
 
         Task<int> GetUnreadCountAsync(int conversationId, string userId);
         Task<List<string>> GetConversationParticipantIdsAsync(int conversationId);
+        Task<Dictionary<int, int>> GetUnreadCountsForUserAsync(string userId);
     }
 }

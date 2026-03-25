@@ -2,6 +2,7 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.WebUtilities
 @using ACRMS.Data
 @using ACRMS.Repository.IRepository
 @using Microsoft.AspNetCore.Authorization
@@ -97,16 +98,6 @@
         padding: 3px 8px;
     }
 
-    /* .messages-box {
-        flex: 1;
-        border: 1px solid #ececec;
-        border-radius: 14px;
-        padding: 14px;
-        overflow-y: auto;
-        background: #fff;
-        margin-bottom: 12px;
-        min-height: 420px;
-    } */
     .messages-box {
         height: 420px;
         overflow-y: auto;
@@ -174,7 +165,9 @@
 
                 <div class="new-chat-box">
                     <div class="mb-2">
-                        <select class="form-control" @bind="_selectedUserId">
+                        <select class="form-control"
+                                @bind="_selectedUserId"
+                                @onfocus="@(async _ => await EnsureUsersLoaded())">
                             <option value="">-- اختر مستخدمًا --</option>
                             @foreach (var user in _availableUsers)
                             {
@@ -284,7 +277,7 @@
     private string _newMessageText = string.Empty;
 
     private HubConnection? _hubConnection;
-    private bool _shouldScrollToBottom = false;
+    private bool _usersLoaded = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -300,15 +293,15 @@
         {
             await InvokeAsync(async () =>
             {
-                await Load();
+                await LoadConversationsOnly();
 
                 if (_selectedConversationId.HasValue)
                 {
                     _messages = await _repo.GetConversationMessagesAsync(_selectedConversationId.Value);
                 }
 
-                _shouldScrollToBottom = true;
                 StateHasChanged();
+                await _JS.InvokeVoidAsync("chatHelpers.scrollToBottomById", "messagesBox");
             });
         });
 
@@ -321,37 +314,32 @@
             await _JS.ToastrError("تعذر تشغيل التحديث الفوري للشات");
         }
 
-        await Load();
-    }
+        await LoadConversationsOnly();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_shouldScrollToBottom)
+        var uri = new Uri(NavigationManager.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        if (query.TryGetValue("conversationId", out var values) &&
+            int.TryParse(values.FirstOrDefault(), out var conversationId))
         {
-            _shouldScrollToBottom = false;
-            await _JS.InvokeVoidAsync("chatHelpers.scrollToBottomById", "messagesBox");
+            await OpenConversation(conversationId);
         }
     }
 
-    private async Task Load()
+    private async Task LoadConversationsOnly()
     {
         _conversations = await _repo.GetUserConversationsAsync(_currentUserId);
+        _unreadCounts = await _repo.GetUnreadCountsForUserAsync(_currentUserId);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task EnsureUsersLoaded()
+    {
+        if (_usersLoaded)
+            return;
+
         _availableUsers = await _repo.GetAvailableUsersForChatAsync(_currentUserId);
-
-        _unreadCounts = new Dictionary<int, int>();
-        foreach (var conv in _conversations)
-        {
-            _unreadCounts[conv.Id] = await _repo.GetUnreadCountAsync(conv.Id, _currentUserId);
-        }
-
-        if (_selectedConversationId.HasValue)
-        {
-            _messages = await _repo.GetConversationMessagesAsync(_selectedConversationId.Value);
-        }
-        else
-        {
-            _messages = new List<Message>();
-        }
+        _usersLoaded = true;
 
         await InvokeAsync(StateHasChanged);
     }
@@ -360,6 +348,8 @@
     {
         try
         {
+            await EnsureUsersLoaded();
+
             if (string.IsNullOrWhiteSpace(_selectedUserId))
             {
                 await _JS.ToastrError("اختر مستخدمًا أولًا");
@@ -368,10 +358,9 @@
 
             var conversationId = await _repo.CreatePrivateConversationAsync(_currentUserId, _selectedUserId);
             _selectedUserId = string.Empty;
-
             _selectedConversationId = conversationId;
 
-            await Load();
+            await LoadConversationsOnly();
             await OpenConversation(conversationId);
         }
         catch (Exception ex)
@@ -385,16 +374,7 @@
         _selectedConversationId = conversationId;
 
         var conv = _conversations.FirstOrDefault(x => x.Id == conversationId);
-
-        if (conv is null)
-        {
-            await Load();
-            conv = _conversations.FirstOrDefault(x => x.Id == conversationId);
-        }
-
-        _selectedConversationTitle = conv is null
-            ? "المحادثة"
-            : GetConversationDisplayName(conv);
+        _selectedConversationTitle = conv is null ? "المحادثة" : GetConversationDisplayName(conv);
 
         _messages = await _repo.GetConversationMessagesAsync(conversationId);
         await _repo.MarkConversationAsReadAsync(conversationId, _currentUserId);
@@ -422,8 +402,8 @@
 
         await _repo.MarkConversationAsReadAsync(_selectedConversationId.Value, _currentUserId);
 
-        await Load();
         _messages = await _repo.GetConversationMessagesAsync(_selectedConversationId.Value);
+        await LoadConversationsOnly();
 
         if (_hubConnection is not null)
         {
@@ -455,6 +435,11 @@
 
     private string GetConversationDisplayName(Conversation conv)
     {
+        if (conv.Type == ACRMS.Data.Enums.ConversationType.Section && conv.Section is not null)
+        {
+            return $"شعبة {conv.Section.SectionName}";
+        }
+
         var other = conv.Participants
             .FirstOrDefault(p => p.UserId != _currentUserId)?.User;
 

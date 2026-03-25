@@ -183,5 +183,34 @@ namespace ACRMS.Repository
                 .Select(p => p.UserId)
                 .ToListAsync();
         }
+
+        public async Task<Dictionary<int, int>> GetUnreadCountsForUserAsync(string userId)
+        {
+            var conversationIds = await _context.ConversationParticipants
+                .Where(cp => cp.UserId == userId)
+                .Select(cp => cp.ConversationId)
+                .ToListAsync();
+
+            var counts = await _context.Messages
+                .Where(m => conversationIds.Contains(m.ConversationId) &&
+                            !m.IsDeleted &&
+                            m.SenderUserId != userId)
+                .GroupJoin(
+                    _context.MessageReads.Where(r => r.UserId == userId),
+                    m => m.Id,
+                    r => r.MessageId,
+                    (m, reads) => new { m.ConversationId, IsRead = reads.Any() }
+                )
+                .Where(x => !x.IsRead)
+                .GroupBy(x => x.ConversationId)
+                .Select(g => new
+                {
+                    ConversationId = g.Key,
+                    Count = g.Count()
+                })
+                .ToListAsync();
+
+            return counts.ToDictionary(x => x.ConversationId, x => x.Count);
+        }
     }
 }
