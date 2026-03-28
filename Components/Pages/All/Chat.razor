@@ -155,6 +155,15 @@
         color: #666;
         font-size: 15px;
     }
+
+    .chat-info-box {
+        border: 1px solid #ffe08a;
+        background: #fff8e6;
+        color: #7a5a00;
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+    }
 </style>
 
 <div class="chat-wrap" dir="rtl">
@@ -240,16 +249,25 @@
                         }
                     </div>
 
-                    <div>
-                        <div class="input-group">
-                            <input class="form-control"
-                                   @bind="_newMessageText"
-                                   @bind:event="oninput"
-                                   @onkeydown="HandleKeyDown"
-                                   placeholder="اكتب رسالتك هنا..." />
-                            <button type="button" class="btn btn-success" @onclick="SendMessage">إرسال</button>
+                    @if (_selectedConversationId.HasValue && !_canCurrentUserSend)
+                    {
+                        <div class="chat-info-box">
+                            هذه المحادثة مفعّلة للعرض فقط، ولا يمكنك إرسال رسائل فيها حاليًا.
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <div class="input-group">
+                                <input class="form-control"
+                                       @bind="_newMessageText"
+                                       @bind:event="oninput"
+                                       @onkeydown="HandleKeyDown"
+                                       placeholder="اكتب رسالتك هنا..." />
+                                <button type="button" class="btn btn-success" @onclick="SendMessage">إرسال</button>
+                            </div>
+                        </div>
+                    }
                 }
                 else
                 {
@@ -278,6 +296,8 @@
 
     private HubConnection? _hubConnection;
     private bool _usersLoaded = false;
+    private bool _canCurrentUserSend = true;
+    private Conversation? _currentConversation;
 
     protected override async Task OnInitializedAsync()
     {
@@ -298,6 +318,8 @@
                 if (_selectedConversationId.HasValue)
                 {
                     _messages = await _repo.GetConversationMessagesAsync(_selectedConversationId.Value);
+                    _currentConversation = await _repo.GetConversationByIdAsync(_selectedConversationId.Value);
+                    _canCurrentUserSend = await _repo.CanUserSendToConversationAsync(_selectedConversationId.Value, _currentUserId);
                 }
 
                 StateHasChanged();
@@ -377,6 +399,9 @@
         _selectedConversationTitle = conv is null ? "المحادثة" : GetConversationDisplayName(conv);
 
         _messages = await _repo.GetConversationMessagesAsync(conversationId);
+        _currentConversation = await _repo.GetConversationByIdAsync(conversationId);
+        _canCurrentUserSend = await _repo.CanUserSendToConversationAsync(conversationId, _currentUserId);
+
         await _repo.MarkConversationAsReadAsync(conversationId, _currentUserId);
 
         if (_unreadCounts.ContainsKey(conversationId))
@@ -391,6 +416,12 @@
         if (!_selectedConversationId.HasValue)
         {
             await _JS.ToastrError("اختر محادثة أولًا");
+            return;
+        }
+
+        if (!_canCurrentUserSend)
+        {
+            await _JS.ToastrError("غير مسموح لك بإرسال رسالة في هذه المحادثة");
             return;
         }
 
@@ -422,7 +453,7 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        if (e.Key == "Enter" && _canCurrentUserSend)
         {
             await SendMessage();
         }
@@ -437,7 +468,8 @@
     {
         if (conv.Type == ACRMS.Data.Enums.ConversationType.Section && conv.Section is not null)
         {
-            return $"شعبة {conv.Section.SectionName}";
+            var courseName = conv.Section.Course?.CourseName ?? "";
+            return $"شعبة {conv.Section.SectionName} - {courseName}";
         }
 
         var other = conv.Participants

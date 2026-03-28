@@ -12,24 +12,263 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Resend email confirmation</PageTitle>
+<PageTitle>إعادة إرسال تأكيد البريد الإلكتروني</PageTitle>
 
-<h1>Resend email confirmation</h1>
-<h2>Enter your email.</h2>
-<hr />
-<StatusMessage Message="@message" />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" aria-required="true" placeholder="name@example.com" />
-                <label for="Input.Email" class="form-label">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger" />
+<style>
+    .resend-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f7faff 0%, #eef4ff 50%, #f9fbff 100%);
+        padding: 24px;
+        direction: rtl;
+    }
+
+    .resend-shell {
+        width: 100%;
+        max-width: 1000px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        background: #fff;
+        border: 1px solid #e8eefc;
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(31, 60, 136, 0.10);
+        min-height: 560px;
+    }
+
+    @@media (max-width: 900px) {
+        .resend-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .resend-brand {
+            display: none;
+        }
+    }
+
+    .resend-brand {
+        position: relative;
+        background: linear-gradient(160deg, #0d6efd 0%, #1f3c88 100%);
+        color: #fff;
+        padding: 48px 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+        .resend-brand::before {
+            content: "";
+            position: absolute;
+            inset: auto -60px -60px auto;
+            width: 220px;
+            height: 220px;
+            background: rgba(255,255,255,.08);
+            border-radius: 50%;
+        }
+
+        .resend-brand::after {
+            content: "";
+            position: absolute;
+            top: -50px;
+            left: -50px;
+            width: 180px;
+            height: 180px;
+            background: rgba(255,255,255,.06);
+            border-radius: 50%;
+        }
+
+    .brand-badge {
+        width: 84px;
+        height: 84px;
+        border-radius: 22px;
+        background: rgba(255,255,255,.14);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+        margin-bottom: 22px;
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(255,255,255,.18);
+    }
+
+    .brand-title {
+        font-size: 2.1rem;
+        font-weight: 900;
+        margin: 0 0 12px 0;
+    }
+
+    .brand-subtitle {
+        font-size: 1rem;
+        line-height: 1.9;
+        margin: 0;
+        color: rgba(255,255,255,.92);
+        max-width: 430px;
+    }
+
+    .brand-list {
+        margin-top: 28px;
+        padding: 0;
+        list-style: none;
+    }
+
+        .brand-list li {
+            margin-bottom: 12px;
+            font-size: .97rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255,255,255,.95);
+        }
+
+    .resend-panel {
+        padding: 42px 34px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: #fff;
+    }
+
+    .resend-top {
+        text-align: center;
+        margin-bottom: 26px;
+    }
+
+    .resend-logo {
+        width: 74px;
+        height: 74px;
+        border-radius: 20px;
+        margin: 0 auto 14px;
+        background: linear-gradient(135deg, #eaf2ff 0%, #dce9ff 100%);
+        color: #0d6efd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        border: 1px solid #dbe7ff;
+    }
+
+    .resend-title {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 900;
+        color: #1f2937;
+    }
+
+    .resend-desc {
+        margin-top: 8px;
+        color: #6b7280;
+        font-size: .97rem;
+    }
+
+    .resend-form-card {
+        border: 1px solid #edf1f7;
+        border-radius: 22px;
+        padding: 24px 20px;
+        background: #fcfdff;
+    }
+
+    .form-label {
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .form-control {
+        border-radius: 14px;
+        min-height: 52px;
+        border: 1px solid #dbe3f0;
+        box-shadow: none;
+    }
+
+        .form-control:focus {
+            border-color: #7fb0ff;
+            box-shadow: 0 0 0 0.2rem rgba(13,110,253,.10);
+        }
+
+    .btn-resend {
+        border-radius: 14px;
+        min-height: 52px;
+        font-weight: 800;
+        font-size: 1rem;
+        box-shadow: 0 10px 22px rgba(13,110,253,.18);
+    }
+
+    .helper-link {
+        margin-top: 16px;
+        text-align: center;
+    }
+
+        .helper-link a {
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+            .helper-link a:hover {
+                text-decoration: underline;
+            }
+</style>
+
+<div class="resend-page">
+    <div class="resend-shell">
+        <div class="resend-brand">
+            <div class="brand-badge">
+                <span class="bi bi-envelope-check-fill"></span>
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Resend</button>
-        </EditForm>
+
+            <h1 class="brand-title">إجراءاتك</h1>
+            <p class="brand-subtitle">
+                إذا لم يصلك بريد التفعيل، يمكنك إعادة إرساله بسهولة عبر إدخال بريدك الإلكتروني المسجل في النظام.
+            </p>
+
+            <ul class="brand-list">
+                <li><span class="bi bi-check-circle-fill"></span> إعادة إرسال رابط التفعيل بسرعة</li>
+                <li><span class="bi bi-check-circle-fill"></span> تأكيد البريد لحماية الحساب</li>
+                <li><span class="bi bi-check-circle-fill"></span> متابعة آمنة للوصول إلى خدمات النظام</li>
+            </ul>
+        </div>
+
+        <div class="resend-panel">
+            <div class="resend-top">
+                <div class="resend-logo">
+                    <span class="bi bi-envelope-arrow-up-fill"></span>
+                </div>
+                <h2 class="resend-title">إعادة إرسال تأكيد البريد</h2>
+                <div class="resend-desc">
+                    أدخل بريدك الإلكتروني المسجل لإعادة إرسال رسالة التفعيل
+                </div>
+            </div>
+
+            <div class="resend-form-card">
+                <StatusMessage Message="@message" />
+
+                <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger mb-3" role="alert" />
+
+                    <div class="mb-3">
+                        <label for="Input.Email" class="form-label">البريد الإلكتروني</label>
+                        <InputText @bind-Value="Input.Email"
+                                   id="Input.Email"
+                                   class="form-control"
+                                   aria-required="true"
+                                   placeholder="example@domain.com" />
+                        <ValidationMessage For="() => Input.Email" class="text-danger" />
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-resend">
+                            إعادة الإرسال
+                        </button>
+                    </div>
+
+                    <div class="helper-link">
+                        <a href="/Account/Login">العودة إلى تسجيل الدخول</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -44,25 +283,27 @@
         var user = await UserManager.FindByEmailAsync(Input.Email!);
         if (user is null)
         {
-            message = "Verification email sent. Please check your email.";
+            message = "تم إرسال رسالة التحقق. يرجى التحقق من بريدك الإلكتروني.";
             return;
         }
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
-        message = "Verification email sent. Please check your email.";
+        message = "تم إرسال رسالة التحقق. يرجى التحقق من بريدك الإلكتروني.";
     }
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "البريد الإلكتروني مطلوب")]
+        [EmailAddress(ErrorMessage = "صيغة البريد الإلكتروني غير صحيحة")]
         public string Email { get; set; } = "";
     }
 }

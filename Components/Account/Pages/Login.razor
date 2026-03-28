@@ -10,57 +10,328 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>تسجيل الدخول</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-lg-6">
-        <section>
-            <StatusMessage Message="@errorMessage" />
-            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
-                <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label for="Input.Email" class="form-label">Email</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+<style>
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f7faff 0%, #eef4ff 50%, #f9fbff 100%);
+        padding: 24px;
+        direction: rtl;
+    }
+
+    .login-shell {
+        width: 100%;
+        max-width: 1100px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        background: #fff;
+        border: 1px solid #e8eefc;
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(31, 60, 136, 0.10);
+        min-height: 650px;
+    }
+
+    @@media (max-width: 900px) {
+        .login-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .login-brand {
+            display: none;
+        }
+    }
+
+    .login-brand {
+        position: relative;
+        background: linear-gradient(160deg, #0d6efd 0%, #1f3c88 100%);
+        color: #fff;
+        padding: 48px 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .login-brand::before {
+        content: "";
+        position: absolute;
+        inset: auto -60px -60px auto;
+        width: 220px;
+        height: 220px;
+        background: rgba(255,255,255,.08);
+        border-radius: 50%;
+    }
+
+    .login-brand::after {
+        content: "";
+        position: absolute;
+        top: -50px;
+        left: -50px;
+        width: 180px;
+        height: 180px;
+        background: rgba(255,255,255,.06);
+        border-radius: 50%;
+    }
+
+    .brand-badge {
+        width: 84px;
+        height: 84px;
+        border-radius: 22px;
+        background: rgba(255,255,255,.14);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+        margin-bottom: 22px;
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(255,255,255,.18);
+    }
+
+    .brand-title {
+        font-size: 2.2rem;
+        font-weight: 900;
+        margin: 0 0 12px 0;
+        letter-spacing: .3px;
+    }
+
+    .brand-subtitle {
+        font-size: 1.02rem;
+        line-height: 1.9;
+        margin: 0;
+        color: rgba(255,255,255,.92);
+        max-width: 460px;
+    }
+
+    .brand-list {
+        margin-top: 28px;
+        padding: 0;
+        list-style: none;
+    }
+
+    .brand-list li {
+        margin-bottom: 12px;
+        font-size: .98rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: rgba(255,255,255,.95);
+    }
+
+    .login-panel {
+        padding: 42px 34px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: #fff;
+    }
+
+    .login-top {
+        text-align: center;
+        margin-bottom: 26px;
+    }
+
+    .login-logo {
+        width: 74px;
+        height: 74px;
+        border-radius: 20px;
+        margin: 0 auto 14px;
+        background: linear-gradient(135deg, #eaf2ff 0%, #dce9ff 100%);
+        color: #0d6efd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        border: 1px solid #dbe7ff;
+    }
+
+    .login-title {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 900;
+        color: #1f2937;
+    }
+
+    .login-desc {
+        margin-top: 8px;
+        color: #6b7280;
+        font-size: .97rem;
+    }
+
+    .login-form-card {
+        border: 1px solid #edf1f7;
+        border-radius: 22px;
+        padding: 24px 20px;
+        background: #fcfdff;
+    }
+
+    .form-label {
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .form-control {
+        border-radius: 14px;
+        min-height: 52px;
+        border: 1px solid #dbe3f0;
+        box-shadow: none;
+    }
+
+    .form-control:focus {
+        border-color: #7fb0ff;
+        box-shadow: 0 0 0 0.2rem rgba(13,110,253,.10);
+    }
+
+    .btn-login {
+        border-radius: 14px;
+        min-height: 52px;
+        font-weight: 800;
+        font-size: 1rem;
+        box-shadow: 0 10px 22px rgba(13,110,253,.18);
+    }
+
+    .helper-links {
+        margin-top: 18px;
+    }
+
+    .helper-links a {
+        display: inline-block;
+        margin-bottom: 8px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .helper-links a:hover {
+        text-decoration: underline;
+    }
+
+    .remember-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .remember-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: #4b5563;
+    }
+
+    .external-box {
+        margin-top: 18px;
+        border-top: 1px dashed #d9e1ee;
+        padding-top: 18px;
+    }
+
+    .external-title {
+        margin-bottom: 10px;
+        font-weight: 800;
+        color: #374151;
+        font-size: .95rem;
+    }
+</style>
+
+<div class="login-page">
+    <div class="login-shell">
+        <div class="login-brand">
+            <div class="brand-badge">
+                <span class="bi bi-clipboard2-check-fill"></span>
+            </div>
+
+            <h1 class="brand-title">إجراءاتك</h1>
+            <p class="brand-subtitle">
+                منصة أكاديمية ذكية لتنظيم الطلبات والإجراءات والتواصل بين الطلبة وأعضاء الهيئة التدريسية
+                بطريقة رسمية، واضحة، ومؤتمتة.
+            </p>
+
+            <ul class="brand-list">
+                <li><span class="bi bi-check-circle-fill"></span> متابعة التعميمات والتنبيهات الأكاديمية</li>
+                <li><span class="bi bi-check-circle-fill"></span> طلبات المواعيد والأعذار الرسمية ومراجعة العلامات</li>
+                <li><span class="bi bi-check-circle-fill"></span> تواصل منظم وآمن بين الطالب والدكتور</li>
+            </ul>
+        </div>
+
+        <div class="login-panel">
+            <div class="login-top">
+                <div class="login-logo">
+                    <span class="bi bi-box-arrow-in-right"></span>
                 </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label for="Input.Password" class="form-label">Password</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
-                </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Remember me
-                    </label>
-                </div>
-                <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <div>
-                    <p>
-                        <a href="Account/ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
-                </div>
-            </EditForm>
-        </section>
-    </div>
-    <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            <ExternalLoginPicker />
-        </section>
+                <h2 class="login-title">تسجيل الدخول</h2>
+                <div class="login-desc">سجّل الدخول للوصول إلى حسابك ومتابعة إجراءاتك الأكاديمية</div>
+            </div>
+
+            <div class="login-form-card">
+                <StatusMessage Message="@errorMessage" />
+
+                <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger mb-3" role="alert" />
+
+                    <div class="mb-3">
+                        <label for="Input.Email" class="form-label">البريد الإلكتروني</label>
+                        <InputText @bind-Value="Input.Email"
+                                   id="Input.Email"
+                                   class="form-control"
+                                   autocomplete="username"
+                                   aria-required="true"
+                                   placeholder="example@domain.com" />
+                        <ValidationMessage For="() => Input.Email" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Input.Password" class="form-label">كلمة المرور</label>
+                        <InputText type="password"
+                                   @bind-Value="Input.Password"
+                                   id="Input.Password"
+                                   class="form-control"
+                                   autocomplete="current-password"
+                                   aria-required="true"
+                                   placeholder="أدخل كلمة المرور" />
+                        <ValidationMessage For="() => Input.Password" class="text-danger" />
+                    </div>
+
+                    <div class="remember-row mb-3">
+                        <label class="remember-label">
+                            <InputCheckbox @bind-Value="Input.RememberMe" class="form-check-input" />
+                            <span>تذكرني</span>
+                        </label>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-login">
+                            تسجيل الدخول
+                        </button>
+                    </div>
+
+                    <div class="helper-links text-center">
+                        <p class="mb-1">
+                            <a href="Account/ForgotPassword">هل نسيت كلمة المرور؟</a>
+                        </p>
+                       @*  <p class="mb-1">
+                            <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">
+                                إنشاء حساب جديد
+                            </a>
+                        </p> *@
+                        <p class="mb-0">
+                            <a href="Account/ResendEmailConfirmation">إعادة إرسال تأكيد البريد الإلكتروني</a>
+                        </p>
+                    </div>
+
+                   @*  <div class="external-box">
+                        <div class="external-title">خيارات دخول أخرى</div>
+                        <ExternalLoginPicker />
+                    </div> *@
+                </EditForm>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -80,16 +351,18 @@
     {
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
-            // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         }
     }
 
     public async Task LoginUser()
     {
-        // This doesn't count login failures towards account lockout
-        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+        var result = await SignInManager.PasswordSignInAsync(
+            Input.Email,
+            Input.Password,
+            Input.RememberMe,
+            lockoutOnFailure: false);
+
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
@@ -108,21 +381,21 @@
         }
         else
         {
-            errorMessage = "Error: Invalid login attempt.";
+            errorMessage = "خطأ: بيانات تسجيل الدخول غير صحيحة.";
         }
     }
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "البريد الإلكتروني مطلوب")]
+        [EmailAddress(ErrorMessage = "صيغة البريد الإلكتروني غير صحيحة")]
         public string Email { get; set; } = "";
 
-        [Required]
+        [Required(ErrorMessage = "كلمة المرور مطلوبة")]
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
 
-        [Display(Name = "Remember me?")]
+        [Display(Name = "تذكرني")]
         public bool RememberMe { get; set; }
     }
 }

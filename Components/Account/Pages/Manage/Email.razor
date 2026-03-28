@@ -12,43 +12,177 @@
 @inject IdentityUserAccessor UserAccessor
 @inject NavigationManager NavigationManager
 
-<PageTitle>Manage email</PageTitle>
+<PageTitle>إدارة البريد الإلكتروني</PageTitle>
 
-<h3>Manage email</h3>
+<style>
+    .manage-email-page {
+        direction: rtl;
+    }
 
-<StatusMessage Message="@message"/>
-<div class="row">
-    <div class="col-xl-6">
-        <form @onsubmit="OnSendEmailVerificationAsync" @formname="send-verification" id="send-verification-form" method="post">
+    .manage-email-card {
+        border: 1px solid #edf1f7;
+        border-radius: 22px;
+        padding: 24px 20px;
+        background: #fcfdff;
+    }
+
+    .manage-email-title {
+        margin: 0 0 18px 0;
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: #1f2937;
+    }
+
+    .manage-email-desc {
+        color: #6b7280;
+        margin-bottom: 18px;
+        line-height: 1.8;
+        font-size: .96rem;
+    }
+
+    .form-label {
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .form-control {
+        border-radius: 14px;
+        min-height: 52px;
+        border: 1px solid #dbe3f0;
+        box-shadow: none;
+    }
+
+        .form-control:focus {
+            border-color: #7fb0ff;
+            box-shadow: 0 0 0 0.2rem rgba(13,110,253,.10);
+        }
+
+    .readonly-input {
+        background-color: #f3f4f6 !important;
+        color: #6b7280 !important;
+    }
+
+    .btn-main {
+        border-radius: 14px;
+        min-height: 52px;
+        font-weight: 800;
+        font-size: 1rem;
+        box-shadow: 0 10px 22px rgba(13,110,253,.18);
+    }
+
+    .btn-link-custom {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #0d6efd;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+        .btn-link-custom:hover {
+            text-decoration: underline;
+        }
+
+    .email-confirmed-box {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .email-check {
+        min-width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        border: 1px solid #cce7d7;
+        background: #edf9f1;
+        color: #198754;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 1.2rem;
+    }
+
+    .helper-note {
+        margin-top: 10px;
+        color: #6b7280;
+        font-size: .92rem;
+    }
+</style>
+
+<div class="manage-email-page">
+    <div class="manage-email-card">
+        <h3 class="manage-email-title">إدارة البريد الإلكتروني</h3>
+        <div class="manage-email-desc">
+            من هنا يمكنك مراجعة بريدك الإلكتروني الحالي، وإرسال رسالة تفعيل إذا لزم الأمر، أو طلب تغيير البريد الإلكتروني إلى عنوان جديد.
+        </div>
+
+        <StatusMessage Message="@message" />
+
+        <form @onsubmit="OnSendEmailVerificationAsync"
+              @formname="send-verification"
+              id="send-verification-form"
+              method="post">
             <AntiforgeryToken />
         </form>
+
         <EditForm Model="Input" FormName="change-email" OnValidSubmit="OnValidSubmitAsync" method="post">
             <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
+            <ValidationSummary class="text-danger mb-3" role="alert" />
+
             @if (isEmailConfirmed)
             {
-                <div class="form-floating mb-3 input-group">
-                    <input type="text" value="@email" id="email" class="form-control" placeholder="Enter your email" disabled />
-                    <div class="input-group-append">
-                        <span class="h-100 input-group-text text-success font-weight-bold">✓</span>
+                <div class="mb-3">
+                    <label for="email" class="form-label">البريد الإلكتروني الحالي</label>
+                    <div class="email-confirmed-box">
+                        <input type="text"
+                               value="@email"
+                               id="email"
+                               class="form-control readonly-input"
+                               placeholder="البريد الإلكتروني الحالي"
+                               disabled />
+                        <div class="email-check">✓</div>
                     </div>
-                    <label for="email" class="form-label">Email</label>
+                    <div class="helper-note">تم تأكيد هذا البريد الإلكتروني بنجاح.</div>
                 </div>
             }
             else
             {
-                <div class="form-floating mb-3">
-                    <input type="text" value="@email" id="email" class="form-control" placeholder="Enter your email" disabled />
-                    <label for="email" class="form-label">Email</label>
-                    <button type="submit" class="btn btn-link" form="send-verification-form">Send verification email</button>
+                <div class="mb-3">
+                    <label for="email" class="form-label">البريد الإلكتروني الحالي</label>
+                    <input type="text"
+                           value="@email"
+                           id="email"
+                           class="form-control readonly-input"
+                           placeholder="البريد الإلكتروني الحالي"
+                           disabled />
+
+                    <div class="mt-2">
+                        <button type="submit" class="btn-link-custom" form="send-verification-form">
+                            إعادة إرسال رسالة التفعيل
+                        </button>
+                    </div>
+
+                    <div class="helper-note">هذا البريد غير مؤكد حتى الآن.</div>
                 </div>
             }
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.NewEmail" id="Input.NewEmail" class="form-control" autocomplete="email" aria-required="true" placeholder="Enter a new email" />
-                <label for="Input.NewEmail" class="form-label">New email</label>
+
+            <div class="mb-3">
+                <label for="Input.NewEmail" class="form-label">البريد الإلكتروني الجديد</label>
+                <InputText @bind-Value="Input.NewEmail"
+                           id="Input.NewEmail"
+                           class="form-control"
+                           autocomplete="email"
+                           aria-required="true"
+                           placeholder="أدخل البريد الإلكتروني الجديد" />
                 <ValidationMessage For="() => Input.NewEmail" class="text-danger" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Change email</button>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-main">
+                    طلب تغيير البريد الإلكتروني
+                </button>
+            </div>
         </EditForm>
     </div>
 </div>
@@ -78,20 +212,21 @@
     {
         if (Input.NewEmail is null || Input.NewEmail == email)
         {
-            message = "Your email is unchanged.";
+            message = "البريد الإلكتروني لم يتغير.";
             return;
         }
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateChangeEmailTokenAsync(user, Input.NewEmail);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code });
 
         await EmailSender.SendConfirmationLinkAsync(user, Input.NewEmail, HtmlEncoder.Default.Encode(callbackUrl));
 
-        message = "Confirmation link to change email sent. Please check your email.";
+        message = "تم إرسال رابط تأكيد تغيير البريد الإلكتروني. يرجى التحقق من بريدك الإلكتروني الجديد.";
     }
 
     private async Task OnSendEmailVerificationAsync()
@@ -104,20 +239,21 @@
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
 
         await EmailSender.SendConfirmationLinkAsync(user, email, HtmlEncoder.Default.Encode(callbackUrl));
 
-        message = "Verification email sent. Please check your email.";
+        message = "تم إرسال رسالة التفعيل. يرجى التحقق من بريدك الإلكتروني.";
     }
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
-        [Display(Name = "New email")]
+        [Required(ErrorMessage = "البريد الإلكتروني الجديد مطلوب")]
+        [EmailAddress(ErrorMessage = "صيغة البريد الإلكتروني غير صحيحة")]
+        [Display(Name = "البريد الإلكتروني الجديد")]
         public string? NewEmail { get; set; }
     }
 }

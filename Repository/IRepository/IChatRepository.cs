@@ -17,5 +17,11 @@ namespace ACRMS.Repository.IRepository
         Task<int> GetUnreadCountAsync(int conversationId, string userId);
         Task<List<string>> GetConversationParticipantIdsAsync(int conversationId);
         Task<Dictionary<int, int>> GetUnreadCountsForUserAsync(string userId);
+        Task UpdateSectionConversationSettingsAsync(int conversationId, bool isVisibleToStudents, bool studentsCanReply);
+        Task<Conversation?> GetConversationByIdAsync(int conversationId);
+        Task<List<Conversation>> GetSectionConversationsForUserAsync(string userId);
+        Task<int> CreateSectionConversationIfNotExistsAsync(int sectionId, string facultyId);
+        Task<bool> CanUserSendToConversationAsync(int conversationId, string userId);
+        Task SyncSectionConversationParticipantsAsync(int conversationId, int sectionId, string facultyId);
     }
 }

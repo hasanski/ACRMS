@@ -1,17 +1,122 @@
 ﻿@inherits LayoutComponentBase
 @layout ACRMS.Components.Layout.MainLayout
 
-<h1>Manage your account</h1>
+<PageTitle>إدارة الحساب</PageTitle>
 
-<div>
-    <h2>Change your account settings</h2>
-    <hr />
-    <div class="row">
-        <div class="col-lg-3">
-            <ManageNavMenu />
+<style>
+    .manage-layout-page {
+        direction: rtl;
+        padding: 24px 0;
+    }
+
+    .manage-layout-wrap {
+        max-width: 1250px;
+        margin: auto;
+        padding: 0 16px;
+    }
+
+    .manage-layout-hero {
+        background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+        border: 1px solid #dfe9f8;
+        border-radius: 22px;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+
+    .manage-layout-title {
+        margin: 0 0 8px 0;
+        font-size: 2rem;
+        font-weight: 900;
+        color: #1f3c88;
+    }
+
+    .manage-layout-subtitle {
+        margin: 0;
+        color: #6b7280;
+        font-size: 1rem;
+        line-height: 1.8;
+    }
+
+    .manage-layout-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 18px;
+        align-items: start;
+    }
+
+    @@media (max-width: 992px) {
+        .manage-layout-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .manage-side-card,
+    .manage-content-card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .manage-side-head,
+    .manage-content-head {
+        padding: 14px 18px;
+        border-bottom: 1px solid #eee;
+        background: linear-gradient(180deg,#fff 0%,#fafafa 100%);
+    }
+
+        .manage-side-head h3,
+        .manage-content-head h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 900;
+            color: #222;
+        }
+
+    .manage-side-body,
+    .manage-content-body {
+        padding: 18px;
+    }
+
+    .manage-side-note {
+        color: #6b7280;
+        font-size: .92rem;
+        line-height: 1.8;
+        margin-top: 10px;
+    }
+</style>
+
+<div class="manage-layout-page">
+    <div class="manage-layout-wrap">
+        <div class="manage-layout-hero">
+            <h1 class="manage-layout-title">إدارة الحساب</h1>
+            <p class="manage-layout-subtitle">
+                من هنا يمكنك تعديل إعدادات حسابك، مراجعة بياناتك الشخصية، وتحديث معلومات الدخول والتواصل بسهولة.
+            </p>
         </div>
-        <div class="col-lg-9">
-            @Body
+
+        <div class="manage-layout-grid">
+            <div class="manage-side-card">
+                <div class="manage-side-head">
+                    <h3>قائمة الإعدادات</h3>
+                </div>
+                <div class="manage-side-body">
+                    <ManageNavMenu />
+                    <div class="manage-side-note">
+                        اختر القسم الذي تريد تعديله من القائمة الجانبية، ثم قم بحفظ التغييرات بعد الانتهاء.
+                    </div>
+                </div>
+            </div>
+
+            <div class="manage-content-card">
+                <div class="manage-content-head">
+                    <h3>تفاصيل الحساب</h3>
+                </div>
+                <div class="manage-content-body">
+                    @Body
+                </div>
+            </div>
         </div>
     </div>
 </div>

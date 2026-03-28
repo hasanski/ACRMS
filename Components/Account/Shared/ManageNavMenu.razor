@@ -3,28 +3,76 @@
 
 @inject SignInManager<ApplicationUser> SignInManager
 
-<ul class="nav nav-pills flex-column">
+<style>
+    .manage-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+        .manage-nav .nav-link {
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-weight: 700;
+            color: #374151;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            transition: all .2s ease;
+        }
+
+            .manage-nav .nav-link:hover {
+                background: #eef4ff;
+                border-color: #cfe0ff;
+                color: #0d6efd;
+            }
+
+            .manage-nav .nav-link.active {
+                background: linear-gradient(135deg, #0d6efd 0%, #1f3c88 100%);
+                color: #fff !important;
+                border-color: transparent;
+                box-shadow: 0 10px 22px rgba(13,110,253,.18);
+            }
+</style>
+
+<ul class="nav nav-pills flex-column manage-nav">
     <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink>
+        <NavLink class="nav-link" href="Account/Manage" Match="NavLinkMatch.All">
+            الملف الشخصي
+        </NavLink>
     </li>
+
     <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/Email">Email</NavLink>
+        <NavLink class="nav-link" href="Account/Manage/Email">
+            البريد الإلكتروني
+        </NavLink>
     </li>
+
     <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/ChangePassword">Password</NavLink>
+        <NavLink class="nav-link" href="Account/Manage/ChangePassword">
+            كلمة المرور
+        </NavLink>
     </li>
+
     @if (hasExternalLogins)
     {
         <li class="nav-item">
-            <NavLink class="nav-link" href="Account/Manage/ExternalLogins">External logins</NavLink>
+            <NavLink class="nav-link" href="Account/Manage/ExternalLogins">
+                تسجيلات الدخول الخارجية
+            </NavLink>
         </li>
     }
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/TwoFactorAuthentication">Two-factor authentication</NavLink>
-    </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/PersonalData">Personal data</NavLink>
-    </li>
+
+ @*    <li class="nav-item">
+        <NavLink class="nav-link" href="Account/Manage/TwoFactorAuthentication">
+            التحقق بخطوتين
+        </NavLink>
+    </li> *@
+
+    @* <li class="nav-item">
+        <NavLink class="nav-link" href="Account/Manage/PersonalData">
+            البيانات الشخصية
+        </NavLink>
+    </li> *@
 </ul>
 
 @code {

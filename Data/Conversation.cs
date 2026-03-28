@@ -29,5 +29,7 @@ namespace ACRMS.Data
 
         public ICollection<ConversationParticipant> Participants { get; set; } = new List<ConversationParticipant>();
         public ICollection<Message> Messages { get; set; } = new List<Message>();
+        public bool IsVisibleToStudents { get; set; } = true;
+        public bool StudentsCanReply { get; set; } = false;
     }
 }

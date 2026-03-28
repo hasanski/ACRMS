@@ -9,27 +9,259 @@
 @inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Profile</PageTitle>
+<PageTitle>الملف الشخصي</PageTitle>
 
-<h3>Profile</h3>
-<StatusMessage />
+<style>
+    .manage-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f7faff 0%, #eef4ff 50%, #f9fbff 100%);
+        padding: 24px;
+        direction: rtl;
+    }
 
-<div class="row">
-    <div class="col-xl-6">
-        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <input type="text" value="@username" id="username" class="form-control" placeholder="Choose your username." disabled />
-                <label for="username" class="form-label">Username</label>
+    .manage-shell {
+        width: 100%;
+        max-width: 1000px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        background: #fff;
+        border: 1px solid #e8eefc;
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(31, 60, 136, 0.10);
+        min-height: 560px;
+    }
+
+    @@media (max-width: 900px) {
+        .manage-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .manage-brand {
+            display: none;
+        }
+    }
+
+    .manage-brand {
+        position: relative;
+        background: linear-gradient(160deg, #0d6efd 0%, #1f3c88 100%);
+        color: #fff;
+        padding: 48px 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+        .manage-brand::before {
+            content: "";
+            position: absolute;
+            inset: auto -60px -60px auto;
+            width: 220px;
+            height: 220px;
+            background: rgba(255,255,255,.08);
+            border-radius: 50%;
+        }
+
+        .manage-brand::after {
+            content: "";
+            position: absolute;
+            top: -50px;
+            left: -50px;
+            width: 180px;
+            height: 180px;
+            background: rgba(255,255,255,.06);
+            border-radius: 50%;
+        }
+
+    .brand-badge {
+        width: 84px;
+        height: 84px;
+        border-radius: 22px;
+        background: rgba(255,255,255,.14);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+        margin-bottom: 22px;
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(255,255,255,.18);
+    }
+
+    .brand-title {
+        font-size: 2.1rem;
+        font-weight: 900;
+        margin: 0 0 12px 0;
+    }
+
+    .brand-subtitle {
+        font-size: 1rem;
+        line-height: 1.9;
+        margin: 0;
+        color: rgba(255,255,255,.92);
+        max-width: 430px;
+    }
+
+    .brand-list {
+        margin-top: 28px;
+        padding: 0;
+        list-style: none;
+    }
+
+        .brand-list li {
+            margin-bottom: 12px;
+            font-size: .97rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255,255,255,.95);
+        }
+
+    .manage-panel {
+        padding: 42px 34px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: #fff;
+    }
+
+    .manage-top {
+        text-align: center;
+        margin-bottom: 26px;
+    }
+
+    .manage-logo {
+        width: 74px;
+        height: 74px;
+        border-radius: 20px;
+        margin: 0 auto 14px;
+        background: linear-gradient(135deg, #eaf2ff 0%, #dce9ff 100%);
+        color: #0d6efd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        border: 1px solid #dbe7ff;
+    }
+
+    .manage-title {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 900;
+        color: #1f2937;
+    }
+
+    .manage-desc {
+        margin-top: 8px;
+        color: #6b7280;
+        font-size: .97rem;
+    }
+
+    .manage-form-card {
+        border: 1px solid #edf1f7;
+        border-radius: 22px;
+        padding: 24px 20px;
+        background: #fcfdff;
+    }
+
+    .form-label {
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .form-control {
+        border-radius: 14px;
+        min-height: 52px;
+        border: 1px solid #dbe3f0;
+        box-shadow: none;
+    }
+
+        .form-control:focus {
+            border-color: #7fb0ff;
+            box-shadow: 0 0 0 0.2rem rgba(13,110,253,.10);
+        }
+
+    .btn-save {
+        border-radius: 14px;
+        min-height: 52px;
+        font-weight: 800;
+        font-size: 1rem;
+        box-shadow: 0 10px 22px rgba(13,110,253,.18);
+    }
+
+    .readonly-input {
+        background-color: #f3f4f6 !important;
+        color: #6b7280 !important;
+    }
+</style>
+
+<div class="manage-page">
+    <div class="manage-shell">
+        <div class="manage-brand">
+            <div class="brand-badge">
+                <span class="bi bi-person-circle"></span>
             </div>
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number" />
-                <label for="Input.PhoneNumber" class="form-label">Phone number</label>
-                <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+
+            <h1 class="brand-title">إجراءاتك</h1>
+            <p class="brand-subtitle">
+                يمكنك من خلال هذه الصفحة إدارة بيانات حسابك الأساسية والحفاظ على معلوماتك محدثة داخل النظام.
+            </p>
+
+            <ul class="brand-list">
+                <li><span class="bi bi-check-circle-fill"></span> مراجعة بيانات الحساب</li>
+                <li><span class="bi bi-check-circle-fill"></span> تحديث رقم الهاتف بسهولة</li>
+                <li><span class="bi bi-check-circle-fill"></span> الحفاظ على معلومات التواصل محدثة</li>
+            </ul>
+        </div>
+
+        <div class="manage-panel">
+            <div class="manage-top">
+                <div class="manage-logo">
+                    <span class="bi bi-person-vcard-fill"></span>
+                </div>
+                <h2 class="manage-title">الملف الشخصي</h2>
+                <div class="manage-desc">
+                    راجع بيانات حسابك وقم بتحديث رقم الهاتف عند الحاجة
+                </div>
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
-        </EditForm>
+
+            <div class="manage-form-card">
+                <StatusMessage />
+
+                <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger mb-3" role="alert" />
+
+                    <div class="mb-3">
+                        <label for="username" class="form-label">اسم المستخدم</label>
+                        <input type="text"
+                               value="@username"
+                               id="username"
+                               class="form-control readonly-input"
+                               placeholder="اسم المستخدم"
+                               disabled />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Input.PhoneNumber" class="form-label">رقم الهاتف</label>
+                        <InputText @bind-Value="Input.PhoneNumber"
+                                   id="Input.PhoneNumber"
+                                   class="form-control"
+                                   placeholder="أدخل رقم الهاتف" />
+                        <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-save">
+                            حفظ التعديلات
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -60,18 +292,18 @@
             var setPhoneResult = await UserManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
             if (!setPhoneResult.Succeeded)
             {
-                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set phone number.", HttpContext);
+                RedirectManager.RedirectToCurrentPageWithStatus("خطأ: تعذر تحديث رقم الهاتف.", HttpContext);
             }
         }
 
         await SignInManager.RefreshSignInAsync(user);
-        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
+        RedirectManager.RedirectToCurrentPageWithStatus("تم تحديث الملف الشخصي بنجاح.", HttpContext);
     }
 
     private sealed class InputModel
     {
-        [Phone]
-        [Display(Name = "Phone number")]
+        [Phone(ErrorMessage = "صيغة رقم الهاتف غير صحيحة")]
+        [Display(Name = "رقم الهاتف")]
         public string? PhoneNumber { get; set; }
     }
 }

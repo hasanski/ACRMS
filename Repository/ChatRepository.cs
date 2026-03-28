@@ -16,15 +16,51 @@ namespace ACRMS.Repository
 
         public async Task<List<Conversation>> GetUserConversationsAsync(string userId)
         {
-            return await _context.Conversations
+            var conversations = await _context.Conversations
                 .AsNoTracking()
                 .Include(c => c.Participants)
                     .ThenInclude(p => p.User)
                 .Include(c => c.Messages)
                     .ThenInclude(m => m.SenderUser)
+                .Include(c => c.Section)
+                    .ThenInclude(s => s.Course)
                 .Where(c => c.IsActive && c.Participants.Any(p => p.UserId == userId))
-                .OrderByDescending(c => c.Messages.Max(m => (DateTime?)m.SentAt) ?? c.CreatedAt)
                 .ToListAsync();
+
+            var filtered = new List<Conversation>();
+
+            foreach (var conv in conversations)
+            {
+                if (conv.Type != ConversationType.Section)
+                {
+                    filtered.Add(conv);
+                    continue;
+                }
+
+                var section = await _context.Sections
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.Id == conv.SectionId);
+
+                if (section is null)
+                    continue;
+
+                if (section.FacultyMemberId == userId)
+                {
+                    filtered.Add(conv);
+                    continue;
+                }
+
+                if (conv.IsVisibleToStudents)
+                {
+                    filtered.Add(conv);
+                }
+            }
+
+            return filtered
+                .OrderByDescending(c => c.Messages.Any()
+                    ? c.Messages.Max(m => m.SentAt)
+                    : c.CreatedAt)
+                .ToList();
         }
 
         public async Task<List<Message>> GetConversationMessagesAsync(int conversationId)
@@ -103,6 +139,10 @@ namespace ACRMS.Repository
 
         public async Task SendMessageAsync(int conversationId, string senderUserId, string messageText)
         {
+            var canSend = await CanUserSendToConversationAsync(conversationId, senderUserId);
+            if (!canSend)
+                throw new Exception("غير مسموح لك بإرسال رسالة في هذه المحادثة");
+
             var msg = new Message
             {
                 ConversationId = conversationId,
@@ -211,6 +251,187 @@ namespace ACRMS.Repository
                 .ToListAsync();
 
             return counts.ToDictionary(x => x.ConversationId, x => x.Count);
+        }
+        public async Task<Conversation?> GetConversationByIdAsync(int conversationId)
+        {
+            return await _context.Conversations
+                .Include(c => c.Section)
+                    .ThenInclude(s => s.Course)
+                .FirstOrDefaultAsync(c => c.Id == conversationId);
+        }
+
+        public async Task UpdateSectionConversationSettingsAsync(int conversationId, bool isVisibleToStudents, bool studentsCanReply)
+        {
+            var conversation = await _context.Conversations
+                .FirstOrDefaultAsync(c => c.Id == conversationId && c.Type == ConversationType.Section);
+
+            if (conversation is null)
+                return;
+
+            conversation.IsVisibleToStudents = isVisibleToStudents;
+            conversation.StudentsCanReply = studentsCanReply;
+
+            await _context.SaveChangesAsync();
+        }
+        public async Task<List<Conversation>> GetSectionConversationsForUserAsync(string userId)
+        {
+            var conversations = await _context.Conversations
+                .AsNoTracking()
+                .Include(c => c.Section)
+                    .ThenInclude(s => s.Course)
+                .Include(c => c.Participants)
+                    .ThenInclude(p => p.User)
+                .Include(c => c.Messages)
+                    .ThenInclude(m => m.SenderUser)
+                .Where(c => c.IsActive &&
+                            c.Type == ConversationType.Section &&
+                            c.Participants.Any(p => p.UserId == userId))
+                .ToListAsync();
+
+            return conversations
+                .OrderByDescending(c => c.Messages.Any()
+                    ? c.Messages.Max(m => m.SentAt)
+                    : c.CreatedAt)
+                .ToList();
+        }
+
+        public async Task<int> CreateSectionConversationIfNotExistsAsync(int sectionId, string facultyId)
+        {
+            var existing = await _context.Conversations
+                .Include(c => c.Participants)
+                .FirstOrDefaultAsync(c => c.Type == ConversationType.Section &&
+                                          c.SectionId == sectionId &&
+                                          c.IsActive);
+
+            if (existing is not null)
+            {
+                await SyncSectionConversationParticipantsAsync(existing.Id, sectionId, facultyId);
+                return existing.Id;
+            }
+
+            var section = await _context.Sections
+                .Include(s => s.Course)
+                .FirstAsync(s => s.Id == sectionId);
+
+            var conversation = new Conversation
+            {
+                Title = $"شعبة {section.SectionName} - {section.Course?.CourseName}",
+                Type = ConversationType.Section,
+                SectionId = sectionId,
+                CreatedByUserId = facultyId,
+                IsActive = true,
+                IsReadOnly = false,
+                IsVisibleToStudents = true,
+                StudentsCanReply = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Conversations.Add(conversation);
+            await _context.SaveChangesAsync();
+
+            var participants = new List<ConversationParticipant>();
+
+            participants.Add(new ConversationParticipant
+            {
+                ConversationId = conversation.Id,
+                UserId = facultyId
+            });
+
+            var studentIds = await _context.Enrollments
+                .Where(e => e.SectionId == sectionId)
+                .Select(e => e.StudentId)
+                .Distinct()
+                .ToListAsync();
+
+            foreach (var studentId in studentIds)
+            {
+                if (!participants.Any(p => p.UserId == studentId))
+                {
+                    participants.Add(new ConversationParticipant
+                    {
+                        ConversationId = conversation.Id,
+                        UserId = studentId
+                    });
+                }
+            }
+
+            _context.ConversationParticipants.AddRange(participants);
+            await _context.SaveChangesAsync();
+
+            return conversation.Id;
+        }
+
+        public async Task<bool> CanUserSendToConversationAsync(int conversationId, string userId)
+        {
+            var conversation = await _context.Conversations
+                .Include(c => c.Section)
+                .FirstOrDefaultAsync(c => c.Id == conversationId);
+
+            if (conversation is null)
+                return false;
+
+            if (conversation.Type == ConversationType.Private)
+                return true;
+
+            if (conversation.Type == ConversationType.Section)
+            {
+                var section = await _context.Sections
+                    .FirstOrDefaultAsync(s => s.Id == conversation.SectionId);
+
+                if (section is null)
+                    return false;
+
+                var isFaculty = section.FacultyMemberId == userId;
+                if (isFaculty)
+                    return true;
+
+                var isStudentParticipant = await _context.ConversationParticipants
+                    .AnyAsync(p => p.ConversationId == conversationId && p.UserId == userId);
+
+                if (!isStudentParticipant)
+                    return false;
+
+                if (!conversation.IsVisibleToStudents)
+                    return false;
+
+                return conversation.StudentsCanReply;
+            }
+
+            return true;
+        }
+
+        public async Task SyncSectionConversationParticipantsAsync(int conversationId, int sectionId, string facultyId)
+        {
+            var existingParticipantIds = await _context.ConversationParticipants
+                .Where(p => p.ConversationId == conversationId)
+                .Select(p => p.UserId)
+                .ToListAsync();
+
+            var targetStudentIds = await _context.Enrollments
+                .Where(e => e.SectionId == sectionId)
+                .Select(e => e.StudentId)
+                .Distinct()
+                .ToListAsync();
+
+            var requiredIds = new List<string> { facultyId };
+            requiredIds.AddRange(targetStudentIds);
+
+            var missingIds = requiredIds
+                .Where(id => !existingParticipantIds.Contains(id))
+                .Distinct()
+                .ToList();
+
+            if (missingIds.Any())
+            {
+                var newParticipants = missingIds.Select(id => new ConversationParticipant
+                {
+                    ConversationId = conversationId,
+                    UserId = id
+                }).ToList();
+
+                _context.ConversationParticipants.AddRange(newParticipants);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }
