@@ -3,197 +3,641 @@
 @inject NavigationManager NavigationManager
 
 <style>
-    .nav-scrollable .nav-link {
+    .sidebar-shell {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: radial-gradient(circle at top right, rgba(13,110,253,.08), transparent 28%), linear-gradient(180deg, #f8fbff 0%, #f4f7fc 100%);
+        border-left: 1px solid #e7eef8;
+    }
+
+    .sidebar-header {
+        padding: 18px 16px 16px 16px;
+        background: linear-gradient(145deg, #0b5ed7 0%, #1f3c88 100%);
+        color: #fff;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+        box-shadow: 0 10px 25px rgba(13,110,253,.16);
+    }
+
+    .brand-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .brand-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 16px;
+        background: rgba(255,255,255,.14);
+        border: 1px solid rgba(255,255,255,.18);
+        backdrop-filter: blur(6px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.45rem;
+        flex-shrink: 0;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+    }
+
+    .brand-text {
+        min-width: 0;
+    }
+
+    .brand-title {
+        margin: 0;
+        font-size: 1.18rem;
+        font-weight: 900;
+        color: #fff;
+        letter-spacing: .2px;
+        line-height: 1.2;
+    }
+
+    .brand-subtitle {
+        margin: 4px 0 0 0;
+        font-size: .78rem;
+        color: rgba(255,255,255,.88);
+        line-height: 1.45;
+    }
+
+    .nav-scrollable {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 10px 12px 10px;
+        display: block !important;
+        max-height: none !important;
+    }
+
+        .nav-scrollable::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .nav-scrollable::-webkit-scrollbar-thumb {
+            background: #d9e5f7;
+            border-radius: 999px;
+        }
+
+    .nav-section {
+        margin-bottom: 14px;
+    }
+
+    .nav-group-title {
+        font-size: .76rem;
+        font-weight: 900;
+        color: #6b7280;
+        margin: 10px 10px 8px 10px;
+        letter-spacing: .35px;
+    }
+
+    .nav-item {
+        margin-bottom: 7px;
+    }
+
+    .nav.nav-pills .nav-link {
         display: flex;
         align-items: center;
         gap: 10px;
         white-space: nowrap;
+        border-radius: 16px;
+        padding: 11px 12px;
+        color: #334155 !important;
+        background: rgba(255,255,255,.65);
+        border: 1px solid transparent;
+        font-weight: 800;
+        transition: all .18s ease;
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
     }
 
-        .nav-scrollable .nav-link .bi {
-            font-size: 1.1rem;
-            line-height: 1;
+        .nav.nav-pills .nav-link::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 0;
+            background: linear-gradient(180deg, #0d6efd, #1f3c88);
+            border-radius: 0 10px 10px 0;
+            transition: width .18s ease;
+            opacity: .95;
         }
+
+        .nav.nav-pills .nav-link .bi {
+            font-size: 1.05rem;
+            line-height: 1;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+            color: inherit !important;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nav.nav-pills .nav-link span:last-child {
+            position: relative;
+            z-index: 1;
+            color: inherit !important;
+        }
+
+        .nav.nav-pills .nav-link:hover {
+            background: #edf4ff !important;
+            color: #0d6efd !important;
+            border-color: #dbe7ff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(13,110,253,.08);
+        }
+
+            .nav.nav-pills .nav-link:hover::before {
+                width: 4px;
+            }
+
+        .nav.nav-pills .nav-link.active,
+        .nav.nav-pills .show > .nav-link {
+            background: linear-gradient(135deg, #eef4ff 0%, #e2edff 100%) !important;
+            color: #0d6efd !important;
+            border-color: #cfe0ff !important;
+            box-shadow: 0 10px 22px rgba(13,110,253,.10);
+        }
+
+            .nav.nav-pills .nav-link.active::before,
+            .nav.nav-pills .show > .nav-link::before {
+                width: 5px;
+            }
+
+            .nav.nav-pills .nav-link.active .bi,
+            .nav.nav-pills .show > .nav-link .bi,
+            .nav.nav-pills .nav-link.active span,
+            .nav.nav-pills .show > .nav-link span {
+                color: #0d6efd !important;
+            }
+
+    .nav-footer {
+        padding: 12px 10px 14px 10px;
+        border-top: 1px solid #e7eef8;
+        background: rgba(255,255,255,.7);
+        backdrop-filter: blur(6px);
+    }
+
+    .user-card {
+        background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
+        border: 1px solid #e6edf9;
+        border-radius: 18px;
+        padding: 12px;
+        box-shadow: 0 10px 24px rgba(0,0,0,.04);
+    }
+
+    .user-card-top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .user-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #eaf2ff 0%, #dae8ff 100%);
+        border: 1px solid #d6e4ff;
+        color: #0d6efd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+
+    .user-info {
+        min-width: 0;
+    }
+
+    .user-name {
+        font-weight: 900;
+        color: #1f2937;
+        font-size: .94rem;
+        margin-bottom: 3px;
+        word-break: break-word;
+        line-height: 1.3;
+    }
+
+    .user-role {
+        font-size: .8rem;
+        color: #6b7280;
+    }
+
+    .user-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+        .user-actions .nav-link {
+            margin: 0;
+            padding: 10px 12px;
+            background: #f8fbff !important;
+        }
+
+        .user-actions .logout-btn {
+            width: 100%;
+            text-align: right;
+            border: none;
+            cursor: pointer;
+        }
+
+    .navbar-toggler {
+        display: none !important;
+    }
+
+    @@media (max-width: 991.98px) {
+        .sidebar-shell {
+            border-left: 0;
+            min-height: auto;
+        }
+
+        .sidebar-header {
+            padding: 14px 14px 12px 14px;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            font-size: 1.2rem;
+        }
+
+        .brand-title {
+            font-size: 1rem;
+        }
+
+        .brand-subtitle {
+            font-size: .72rem;
+        }
+
+        .nav-scrollable {
+            padding: 10px 8px;
+            overflow-y: visible !important;
+        }
+
+        .nav-group-title {
+            margin: 8px 8px 6px 8px;
+            font-size: .72rem;
+        }
+
+        .nav.nav-pills .nav-link {
+            padding: 10px 11px;
+            border-radius: 14px;
+            font-size: .94rem;
+            white-space: normal;
+        }
+
+        .nav-footer {
+            padding: 10px 8px 12px 8px;
+        }
+
+        .user-card {
+            border-radius: 16px;
+            padding: 10px;
+        }
+    }
+
+    @@media (max-width: 575.98px) {
+        .sidebar-header {
+            padding: 12px;
+        }
+
+        .brand-wrap {
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        .brand-title {
+            font-size: .95rem;
+        }
+
+        .brand-subtitle {
+            display: none;
+        }
+
+        .nav-scrollable {
+            padding: 8px 6px;
+        }
+
+        .nav-section {
+            margin-bottom: 10px;
+        }
+
+        .nav-group-title {
+            margin: 8px 8px 5px 8px;
+            font-size: .7rem;
+        }
+
+        .nav.nav-pills .nav-link {
+            padding: 9px 10px;
+            border-radius: 13px;
+            gap: 9px;
+            font-size: .9rem;
+        }
+
+            .nav.nav-pills .nav-link .bi {
+                width: 18px;
+                font-size: 1rem;
+            }
+
+        .user-card-top {
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        .user-name {
+            font-size: .88rem;
+        }
+
+        .user-role {
+            font-size: .75rem;
+        }
+
+        .user-actions .nav-link {
+            padding: 9px 10px;
+        }
+    }
 </style>
 
-<div class="top-row navbar navbar-dark">
-    <div class="container-fluid justify-content-center">
-        <a class="navbar-brand m-0" href="">ACRMS</a>
+<div class="sidebar-shell">
+    <div class="sidebar-header">
+        <div class="brand-wrap">
+            <div class="brand-icon">
+                <span class="bi bi-clipboard2-check-fill"></span>
+            </div>
+            <div class="brand-text">
+                <h1 class="brand-title">إجراءاتك</h1>
+                <div class="brand-subtitle">نظام إدارة الإجراءات والتواصل الأكاديمي</div>
+            </div>
+        </div>
     </div>
-</div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+    <div class="nav-scrollable">
+        <nav class="nav nav-pills flex-column">
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
+            <div class="nav-section">
+                <div class="nav-group-title">عام</div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> الصفحة الرئيسية
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="dashboard">
-                <span class="bi bi-speedometer2"></span> لوحة التحكم
-            </NavLink>
-        </div>
-
-        <AuthorizeView Roles="Admin">
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/admin/departments">
-                        <span class="bi bi-building" aria-hidden="true"></span> الأقسام/الكليات
+                <div class="nav-item px-1">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <span class="bi bi-house-door-fill"></span>
+                        <span>الصفحة الرئيسية</span>
                     </NavLink>
                 </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/admin/courses">
-                        <span class="bi bi-journal-text"></span> المواد
+                <div class="nav-item px-1">
+                    <NavLink class="nav-link" href="dashboard">
+                        <span class="bi bi-speedometer2"></span>
+                        <span>لوحة التحكم</span>
                     </NavLink>
                 </div>
+            </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/admin/sections">
-                        <span class="bi bi-diagram-3"></span> الشعب
-                    </NavLink>
-                </div>
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <div class="nav-section">
+                        <div class="nav-group-title">لوحة الإدارة</div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/admin/users">
-                        <span class="bi bi-people"></span> المستخدمون
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/admin/departments">
+                                <span class="bi bi-building"></span>
+                                <span>الأقسام والكليات</span>
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/admin/enrollments">
-                        <span class="bi bi-person-lines-fill"></span> التسجيلات
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/admin/courses">
+                                <span class="bi bi-journal-text"></span>
+                                <span>المواد</span>
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/announcements">
-                        <span class="bi bi-megaphone"></span> التعميمات
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/admin/sections">
+                                <span class="bi bi-diagram-3"></span>
+                                <span>الشعب</span>
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/admin/appointments">
-                        <span class="bi bi-calendar-event"></span> المواعيد
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/admin/users">
+                                <span class="bi bi-people"></span>
+                                <span>المستخدمون</span>
+                            </NavLink>
+                        </div>
 
-        <AuthorizeView Roles="Faculty">
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/faculty/meeting-requests">
-                        <span class="bi bi-calendar-check"></span> طلبات المواعيد
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/admin/enrollments">
+                                <span class="bi bi-person-lines-fill"></span>
+                                <span>التسجيلات</span>
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/faculty/official-excuses">
-                        <span class="bi bi-clipboard-check"></span> مراجعة الأعذار
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/announcements">
+                                <span class="bi bi-megaphone"></span>
+                                <span>التعميمات</span>
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/faculty/grade-review-requests">
-                        <span class="bi bi-clipboard-data"></span> طلبات مراجعة العلامات
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/admin/appointments">
+                                <span class="bi bi-calendar-event"></span>
+                                <span>المواعيد</span>
+                            </NavLink>
+                        </div>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/faculty/notifications">
-                        <span class="bi bi-bell"></span> التنبيهات
-                    </NavLink>
-                </div>
+            <AuthorizeView Roles="Faculty">
+                <Authorized>
+                    <div class="nav-section">
+                        <div class="nav-group-title">خدمات الدكتور</div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/chat">
-                        <span class="bi bi-chat-dots"></span> المحادثات
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/faculty/meeting-requests">
+                                <span class="bi bi-calendar-check"></span>
+                                <span>طلبات المواعيد</span>
+                            </NavLink>
+                        </div>
 
-        <AuthorizeView Roles="Student">
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/student/announcements">
-                        <span class="bi bi-megaphone-fill"></span> التعميمات
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/faculty/official-excuses">
+                                <span class="bi bi-clipboard-check"></span>
+                                <span>مراجعة الأعذار</span>
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/student/meeting-requests">
-                        <span class="bi bi-calendar-plus"></span> طلب موعد
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/faculty/grade-review-requests">
+                                <span class="bi bi-clipboard-data"></span>
+                                <span>مراجعة العلامات</span>
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/student/official-excuses">
-                        <span class="bi bi-file-earmark-medical"></span> الأعذار الرسمية
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/faculty/notifications">
+                                <span class="bi bi-bell"></span>
+                                <span>التنبيهات</span>
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/student/grade-review-requests">
-                        <span class="bi bi-journal-check"></span> مراجعة العلامات
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/faculty/section-chats">
+                                <span class="bi bi-chat-square-text"></span>
+                                <span>محادثات الشعب</span>
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/student/notifications">
-                        <span class="bi bi-bell"></span> التنبيهات
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/chat">
+                                <span class="bi bi-chat-dots"></span>
+                                <span>المحادثات</span>
+                            </NavLink>
+                        </div>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/chat">
-                        <span class="bi bi-chat-dots"></span> المحادثات
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
+            <AuthorizeView Roles="Student">
+                <Authorized>
+                    <div class="nav-section">
+                        <div class="nav-group-title">خدمات الطالب</div>
 
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/student/announcements">
+                                <span class="bi bi-megaphone-fill"></span>
+                                <span>التعميمات</span>
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/student/meeting-requests">
+                                <span class="bi bi-calendar-plus"></span>
+                                <span>طلب موعد</span>
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/student/official-excuses">
+                                <span class="bi bi-file-earmark-medical"></span>
+                                <span>الأعذار الرسمية</span>
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/student/grade-review-requests">
+                                <span class="bi bi-journal-check"></span>
+                                <span>مراجعة العلامات</span>
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/student/notifications">
+                                <span class="bi bi-bell"></span>
+                                <span>التنبيهات</span>
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-1">
+                            <NavLink class="nav-link" href="/chat">
+                                <span class="bi bi-chat-dots"></span>
+                                <span>المحادثات</span>
+                            </NavLink>
+                        </div>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </nav>
+    </div>
+
+    <div class="nav-footer">
         <AuthorizeView>
             <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
-                    </NavLink>
-                </div>
+                <div class="user-card">
+                    <div class="user-card-top">
+                        <div class="user-avatar">
+                            <span class="bi bi-person-fill"></span>
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">@context.User.Identity?.Name</div>
+                            <div class="user-role">
+                                @if (context.User.IsInRole("Admin"))
+                                {
+                                    <span>مدير النظام</span>
+                                }
+                                else if (context.User.IsInRole("Faculty"))
+                                {
+                                    <span>عضو هيئة تدريس</span>
+                                }
+                                else if (context.User.IsInRole("Student"))
+                                {
+                                    <span>طالب</span>
+                                }
+                                else
+                                {
+                                    <span>مستخدم</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="nav-item px-3">
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> تسجيل خروج
-                        </button>
-                    </form>
+                    <div class="user-actions">
+                        <NavLink class="nav-link" href="Account/Manage">
+                            <span class="bi bi-person-circle"></span>
+                            <span>إدارة الحساب</span>
+                        </NavLink>
+
+                        <form action="Account/Logout" method="post">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                            <button type="submit" class="nav-link logout-btn">
+                                <span class="bi bi-box-arrow-right"></span>
+                                <span>تسجيل الخروج</span>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </Authorized>
 
             <NotAuthorized>
-               @*  <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
-                    </NavLink>
-                </div> *@
+                <div class="user-card">
+                    <div class="user-card-top">
+                        <div class="user-avatar">
+                            <span class="bi bi-person-badge"></span>
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">مرحبًا بك</div>
+                            <div class="user-role">سجّل الدخول للوصول إلى خدمات النظام</div>
+                        </div>
+                    </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> تسجيل الدخول
-                    </NavLink>
+                    <div class="user-actions">
+                        <NavLink class="nav-link" href="Account/Login">
+                            <span class="bi bi-box-arrow-in-right"></span>
+                            <span>تسجيل الدخول</span>
+                        </NavLink>
+                    </div>
                 </div>
             </NotAuthorized>
         </AuthorizeView>
-
-    </nav>
+    </div>
 </div>
 
 @code {

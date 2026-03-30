@@ -1,0 +1,664 @@
+﻿@page "/"
+
+<PageTitle>إجراءاتك</PageTitle>
+
+<style>
+    .landing-page {
+        direction: rtl;
+        min-height: 100vh;
+        background: radial-gradient(circle at top right, rgba(13,110,253,.08), transparent 25%), linear-gradient(180deg, #f8fbff 0%, #f5f8fd 100%);
+        color: #1f2937;
+    }
+
+    .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: rgba(255,255,255,.88);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid #e8eef8;
+    }
+
+    .topbar-inner {
+        max-width: 1280px;
+        margin: auto;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: wrap;
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .brand-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #0d6efd 0%, #1f3c88 100%);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        box-shadow: 0 12px 24px rgba(13,110,253,.2);
+    }
+
+    .brand-title {
+        font-size: 1.2rem;
+        font-weight: 900;
+        margin: 0;
+    }
+
+    .brand-subtitle {
+        margin: 2px 0 0 0;
+        font-size: .8rem;
+        color: #6b7280;
+    }
+
+    .menu {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+        .menu a {
+            text-decoration: none;
+            color: #334155;
+            font-weight: 700;
+            padding: 9px 14px;
+            border-radius: 12px;
+            transition: .18s ease;
+        }
+
+            .menu a:hover {
+                background: #eef4ff;
+                color: #0d6efd;
+            }
+
+        .menu .login-btn {
+            background: linear-gradient(135deg, #0d6efd 0%, #1f3c88 100%);
+            color: #fff !important;
+            box-shadow: 0 12px 22px rgba(13,110,253,.18);
+        }
+
+    .hero {
+        max-width: 1280px;
+        margin: auto;
+        padding: 48px 18px 28px 18px;
+        display: grid;
+        grid-template-columns: 1.1fr .9fr;
+        gap: 28px;
+        align-items: center;
+    }
+
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 14px;
+        border-radius: 999px;
+        background: #eef4ff;
+        color: #0d6efd;
+        border: 1px solid #dbe7ff;
+        font-weight: 800;
+        font-size: .9rem;
+        margin-bottom: 16px;
+    }
+
+    .hero h1 {
+        margin: 0 0 14px 0;
+        font-size: 3rem;
+        line-height: 1.25;
+        font-weight: 900;
+        color: #12306b;
+    }
+
+    .hero p {
+        margin: 0 0 20px 0;
+        font-size: 1.05rem;
+        color: #5b6472;
+        line-height: 1.9;
+        max-width: 720px;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 22px;
+    }
+
+    .btn-main, .btn-soft {
+        padding: 13px 22px;
+        border-radius: 14px;
+        text-decoration: none;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: .18s ease;
+    }
+
+    .btn-main {
+        background: linear-gradient(135deg, #0d6efd 0%, #1f3c88 100%);
+        color: #fff;
+        box-shadow: 0 14px 24px rgba(13,110,253,.18);
+    }
+
+        .btn-main:hover {
+            transform: translateY(-1px);
+            color: #fff;
+        }
+
+    .btn-soft {
+        background: #fff;
+        color: #0d6efd;
+        border: 1px solid #dbe7ff;
+    }
+
+        .btn-soft:hover {
+            background: #eef4ff;
+            color: #0d6efd;
+        }
+
+    .hero-stats {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .stat-pill {
+        background: #fff;
+        border: 1px solid #e5ecf7;
+        border-radius: 16px;
+        padding: 14px 16px;
+        min-width: 140px;
+        box-shadow: 0 8px 18px rgba(0,0,0,.04);
+    }
+
+        .stat-pill .num {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: #0d6efd;
+        }
+
+        .stat-pill .txt {
+            font-size: .85rem;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+    .hero-card {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        border: 1px solid #e6edf9;
+        border-radius: 28px;
+        padding: 24px;
+        box-shadow: 0 20px 38px rgba(13,110,253,.08);
+        position: relative;
+        overflow: hidden;
+    }
+
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            background: rgba(13,110,253,.06);
+            border-radius: 50%;
+            top: -40px;
+            left: -40px;
+        }
+
+        .hero-card::after {
+            content: "";
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            background: rgba(31,60,136,.05);
+            border-radius: 50%;
+            bottom: -30px;
+            right: -20px;
+        }
+
+    .mini-card {
+        position: relative;
+        z-index: 1;
+        background: #fff;
+        border: 1px solid #e8eef8;
+        border-radius: 20px;
+        padding: 16px;
+        margin-bottom: 14px;
+        box-shadow: 0 10px 20px rgba(0,0,0,.04);
+    }
+
+        .mini-card h4 {
+            margin: 0 0 8px 0;
+            font-size: 1rem;
+            font-weight: 900;
+            color: #1f3c88;
+        }
+
+        .mini-card p {
+            margin: 0;
+            color: #6b7280;
+            font-size: .9rem;
+            line-height: 1.8;
+        }
+
+    .section {
+        max-width: 1280px;
+        margin: auto;
+        padding: 18px 18px 50px 18px;
+    }
+
+    .section-head {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+        .section-head h2 {
+            margin: 0 0 10px 0;
+            font-size: 2rem;
+            font-weight: 900;
+            color: #12306b;
+        }
+
+        .section-head p {
+            margin: 0;
+            color: #6b7280;
+            line-height: 1.9;
+        }
+
+    .portals {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+    }
+
+    .portal-card {
+        background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+        border: 1px solid #e7edf8;
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 14px 26px rgba(0,0,0,.04);
+        transition: .2s ease;
+    }
+
+        .portal-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 32px rgba(13,110,253,.08);
+            border-color: #cfe0ff;
+        }
+
+    .portal-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #eaf2ff 0%, #dce9ff 100%);
+        color: #0d6efd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 16px;
+    }
+
+    .portal-card h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.2rem;
+        font-weight: 900;
+        color: #1f2937;
+    }
+
+    .portal-card p {
+        margin: 0 0 14px 0;
+        color: #6b7280;
+        line-height: 1.85;
+        min-height: 88px;
+    }
+
+    .portal-card ul {
+        margin: 0 0 16px 0;
+        padding-right: 18px;
+        color: #475569;
+        line-height: 1.9;
+        font-size: .92rem;
+    }
+
+    .portal-link {
+        text-decoration: none;
+        font-weight: 800;
+        color: #0d6efd;
+    }
+
+    .features {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+
+    .feature-card {
+        background: #fff;
+        border: 1px solid #e7edf8;
+        border-radius: 22px;
+        padding: 20px;
+        box-shadow: 0 10px 22px rgba(0,0,0,.03);
+    }
+
+        .feature-card .icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 16px;
+            background: #eef4ff;
+            color: #0d6efd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 14px;
+        }
+
+        .feature-card h4 {
+            margin: 0 0 8px 0;
+            font-size: 1rem;
+            font-weight: 900;
+        }
+
+        .feature-card p {
+            margin: 0;
+            color: #6b7280;
+            line-height: 1.8;
+            font-size: .92rem;
+        }
+
+    .cta-box {
+        background: linear-gradient(135deg, #0d6efd 0%, #1f3c88 100%);
+        color: #fff;
+        border-radius: 28px;
+        padding: 34px 24px;
+        box-shadow: 0 18px 36px rgba(13,110,253,.18);
+        text-align: center;
+    }
+
+        .cta-box h2 {
+            margin: 0 0 12px 0;
+            font-size: 2rem;
+            font-weight: 900;
+        }
+
+        .cta-box p {
+            margin: 0 0 20px 0;
+            color: rgba(255,255,255,.9);
+            line-height: 1.9;
+        }
+
+        .cta-box .btn-soft {
+            background: rgba(255,255,255,.16);
+            border-color: rgba(255,255,255,.24);
+            color: #fff;
+        }
+
+    .footer {
+        max-width: 1280px;
+        margin: auto;
+        padding: 0 18px 28px 18px;
+        color: #6b7280;
+        font-size: .92rem;
+        text-align: center;
+    }
+
+    @@media (max-width: 1100px) {
+        .hero {
+            grid-template-columns: 1fr;
+        }
+
+        .portals {
+            grid-template-columns: 1fr;
+        }
+
+        .features {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .hero h1 {
+            font-size: 2.1rem;
+        }
+
+        .features {
+            grid-template-columns: 1fr;
+        }
+
+        .topbar-inner {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .menu {
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="landing-page">
+
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a href="/" class="brand">
+                <div class="brand-icon">
+                    <span class="bi bi-clipboard2-check-fill"></span>
+                </div>
+                <div>
+                    <h1 class="brand-title">إجراءاتك</h1>
+                    <div class="brand-subtitle">منصة لإدارة الإجراءات والتواصل الأكاديمي</div>
+                </div>
+            </a>
+
+            <nav class="menu">
+                <a href="#portals">البوابات</a>
+                <a href="#features">الخدمات</a>
+                <a href="#about">عن النظام</a>
+                <a href="/Account/Login" class="login-btn">تسجيل الدخول</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div>
+            <div class="hero-badge">
+                <span class="bi bi-stars"></span>
+                <span>منصة أكاديمية حديثة وموحدة</span>
+            </div>
+
+            <h1>إجراءاتك... بوابتك الذكية لإدارة الطلبات والمعاملات الأكاديمية</h1>
+
+            <p>
+                منصة متكاملة تجمع الطلبة وأعضاء الهيئة التدريسية والإدارة في مكان واحد،
+                لتسهيل التعميمات، طلبات المواعيد، الأعذار الرسمية، مراجعة العلامات،
+                والتنبيهات الأكاديمية بطريقة موثقة وسريعة وواضحة.
+            </p>
+
+            <div class="hero-actions">
+                <a href="/Account/Login" class="btn-main">
+                    <span class="bi bi-box-arrow-in-right"></span>
+                    <span>ابدأ الآن</span>
+                </a>
+                <a href="#portals" class="btn-soft">
+                    <span class="bi bi-grid"></span>
+                    <span>استعرض البوابات</span>
+                </a>
+            </div>
+
+            <div class="hero-stats">
+                <div class="stat-pill">
+                    <div class="num">3</div>
+                    <div class="txt">بوابات رئيسية</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="num">+6</div>
+                    <div class="txt">خدمات أكاديمية</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="num">100%</div>
+                    <div class="txt">تواصل موثق</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-card">
+            <div class="mini-card">
+                <h4>التعميمات والتنبيهات</h4>
+                <p>إيصال الإعلانات والتنبيهات الأكاديمية مباشرة إلى الفئة المستهدفة.</p>
+            </div>
+            <div class="mini-card">
+                <h4>الطلبات الأكاديمية</h4>
+                <p>إدارة طلبات المواعيد، الأعذار الرسمية، ومراجعة العلامات من خلال واجهة موحدة.</p>
+            </div>
+            <div class="mini-card">
+                <h4>التواصل الذكي</h4>
+                <p>قنوات تواصل منظمة بين الطالب والدكتور، بالإضافة إلى محادثات الشعب والتواصل الجماعي.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="portals">
+        <div class="section-head">
+            <h2>بوابات النظام</h2>
+            <p>تم تصميم إجراءاتك ليوفر تجربة مخصصة لكل فئة داخل البيئة الأكاديمية.</p>
+        </div>
+
+        <div class="portals">
+            <div class="portal-card">
+                <div class="portal-icon">
+                    <span class="bi bi-mortarboard-fill"></span>
+                </div>
+                <h3>بوابة الطالب</h3>
+                <p>كل ما يحتاجه الطالب في مكان واحد لإرسال الطلبات ومتابعة التنبيهات والتعميمات والتواصل الأكاديمي.</p>
+                <ul>
+                    <li>طلب موعد مع الدكتور</li>
+                    <li>إرسال عذر رسمي</li>
+                    <li>طلب مراجعة علامة</li>
+                    <li>استعراض التعميمات والتنبيهات</li>
+                </ul>
+                <a href="/Account/Login" class="portal-link">الدخول إلى بوابة الطالب</a>
+            </div>
+
+            <div class="portal-card">
+                <div class="portal-icon">
+                    <span class="bi bi-person-workspace"></span>
+                </div>
+                <h3>بوابة الموظف / عضو هيئة التدريس</h3>
+                <p>واجهة متقدمة لإدارة الطلبات الواردة، نشر التعميمات، ومتابعة التواصل مع الطلبة على مستوى فردي أو جماعي.</p>
+                <ul>
+                    <li>مراجعة طلبات المواعيد</li>
+                    <li>فحص الأعذار الرسمية</li>
+                    <li>إدارة طلبات مراجعة العلامات</li>
+                    <li>التواصل مع الشعب والطلبة</li>
+                </ul>
+                <a href="/Account/Login" class="portal-link">الدخول إلى بوابة الموظف</a>
+            </div>
+
+            <div class="portal-card">
+                <div class="portal-icon">
+                    <span class="bi bi-shield-check"></span>
+                </div>
+                <h3>بوابة الإدارة</h3>
+                <p>مركز تحكم شامل لإدارة المستخدمين والأقسام والمواد والشعب والتسجيلات والإشراف على العمليات الأكاديمية.</p>
+                <ul>
+                    <li>إدارة المستخدمين والصلاحيات</li>
+                    <li>إدارة الأقسام والكليات</li>
+                    <li>إدارة المواد والشعب</li>
+                    <li>متابعة مؤشرات النظام</li>
+                </ul>
+                <a href="/Account/Login" class="portal-link">الدخول إلى بوابة الإدارة</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="features">
+        <div class="section-head">
+            <h2>خدمات ومزايا أساسية</h2>
+            <p>مجموعة من الأدوات المصممة لتسهيل الإجراءات الأكاديمية وجعلها أكثر سرعة ووضوحًا.</p>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="icon"><span class="bi bi-megaphone-fill"></span></div>
+                <h4>تعميمات ذكية</h4>
+                <p>إرسال تعميمات موجهة لجميع الطلبة أو لقسم أو شعبة أو طالب محدد.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon"><span class="bi bi-calendar-check-fill"></span></div>
+                <h4>طلبات المواعيد</h4>
+                <p>تنظيم طلبات اللقاءات الأكاديمية ومتابعتها واعتمادها بشكل رسمي.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon"><span class="bi bi-file-earmark-medical-fill"></span></div>
+                <h4>الأعذار الرسمية</h4>
+                <p>تقديم الأعذار مع المرفقات ومراجعتها بطريقة منظمة ومؤرشفة.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon"><span class="bi bi-journal-check"></span></div>
+                <h4>مراجعة العلامات</h4>
+                <p>إدارة طلبات مراجعة العلامات ضمن مسار واضح بين الطالب والدكتور.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon"><span class="bi bi-bell-fill"></span></div>
+                <h4>تنبيهات أكاديمية</h4>
+                <p>تنبيهات فورية حول الحالة الأكاديمية، الطلبات، والمستجدات المهمة.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon"><span class="bi bi-chat-dots-fill"></span></div>
+                <h4>تواصل مباشر</h4>
+                <p>محادثات خاصة وجماعية على مستوى الشعب والقسم وفق صلاحيات منظمة.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon"><span class="bi bi-archive-fill"></span></div>
+                <h4>توثيق مركزي</h4>
+                <p>جميع الإجراءات موثقة ضمن النظام لسهولة الرجوع والمتابعة.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon"><span class="bi bi-speedometer2"></span></div>
+                <h4>لوحات تحكم</h4>
+                <p>لوحة مخصصة لكل دور تعرض أهم المؤشرات والمهام الحالية.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="about">
+        <div class="cta-box">
+            <h2>ابدأ رحلتك مع إجراءاتك</h2>
+            <p>
+                نظام موحد، واجهة واضحة، وتجربة رقمية حديثة تجعل الإجراءات الأكاديمية أسهل وأكثر احترافية.
+            </p>
+            <div class="hero-actions" style="justify-content:center; margin-bottom:0;">
+                <a href="/Account/Login" class="btn-soft">
+                    <span class="bi bi-box-arrow-in-right"></span>
+                    <span>الدخول للنظام</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        جميع الحقوق محفوظة © إجراءاتك - نظام إدارة الإجراءات والتواصل الأكاديمي
+    </footer>
+
+</div>
