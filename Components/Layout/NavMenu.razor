@@ -9,6 +9,7 @@
         flex-direction: column;
         background: radial-gradient(circle at top right, rgba(13,110,253,.08), transparent 28%), linear-gradient(180deg, #f8fbff 0%, #f4f7fc 100%);
         border-left: 1px solid #e7eef8;
+        min-height: 100vh;
     }
 
     .sidebar-header {
@@ -38,10 +39,6 @@
         font-size: 1.45rem;
         flex-shrink: 0;
         box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
-    }
-
-    .brand-text {
-        min-width: 0;
     }
 
     .brand-title {
@@ -206,10 +203,6 @@
         flex-shrink: 0;
     }
 
-    .user-info {
-        min-width: 0;
-    }
-
     .user-name {
         font-weight: 900;
         color: #1f2937;
@@ -242,10 +235,6 @@
             border: none;
             cursor: pointer;
         }
-
-    .navbar-toggler {
-        display: none !important;
-    }
 
     @@media (max-width: 991.98px) {
         .sidebar-shell {
@@ -377,9 +366,7 @@
 <div class="sidebar-shell">
     <div class="sidebar-header">
         <div class="brand-wrap">
-            <div class="brand-icon">
-                <span class="bi bi-clipboard2-check-fill"></span>
-            </div>
+            <div class="brand-icon"><span class="bi bi-clipboard2-check-fill"></span></div>
             <div class="brand-text">
                 <h1 class="brand-title">إجراءاتك</h1>
                 <div class="brand-subtitle">نظام إدارة الإجراءات والتواصل الأكاديمي</div>
@@ -389,21 +376,16 @@
 
     <div class="nav-scrollable">
         <nav class="nav nav-pills flex-column">
-
             <div class="nav-section">
                 <div class="nav-group-title">عام</div>
-
                 <div class="nav-item px-1">
-                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill"></span>
-                        <span>الصفحة الرئيسية</span>
+                    <NavLink class="nav-link" href="/home" Match="NavLinkMatch.All">
+                        <span class="bi bi-house-door-fill"></span><span>الصفحة الرئيسية</span>
                     </NavLink>
                 </div>
-
                 <div class="nav-item px-1">
-                    <NavLink class="nav-link" href="dashboard">
-                        <span class="bi bi-speedometer2"></span>
-                        <span>لوحة التحكم</span>
+                    <NavLink class="nav-link" href="/dashboard">
+                        <span class="bi bi-speedometer2"></span><span>لوحة التحكم</span>
                     </NavLink>
                 </div>
             </div>
@@ -412,55 +394,13 @@
                 <Authorized>
                     <div class="nav-section">
                         <div class="nav-group-title">لوحة الإدارة</div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/admin/departments">
-                                <span class="bi bi-building"></span>
-                                <span>الأقسام والكليات</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/admin/courses">
-                                <span class="bi bi-journal-text"></span>
-                                <span>المواد</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/admin/sections">
-                                <span class="bi bi-diagram-3"></span>
-                                <span>الشعب</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/admin/users">
-                                <span class="bi bi-people"></span>
-                                <span>المستخدمون</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/admin/enrollments">
-                                <span class="bi bi-person-lines-fill"></span>
-                                <span>التسجيلات</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/announcements">
-                                <span class="bi bi-megaphone"></span>
-                                <span>التعميمات</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/admin/appointments">
-                                <span class="bi bi-calendar-event"></span>
-                                <span>المواعيد</span>
-                            </NavLink>
-                        </div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/admin/departments"><span class="bi bi-building"></span><span>الأقسام والكليات</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/admin/courses"><span class="bi bi-journal-text"></span><span>المواد</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/admin/sections"><span class="bi bi-diagram-3"></span><span>الشعب</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/admin/users"><span class="bi bi-people"></span><span>المستخدمون</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/admin/enrollments"><span class="bi bi-person-lines-fill"></span><span>التسجيلات</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/announcements"><span class="bi bi-megaphone"></span><span>التعميمات</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/admin/appointments"><span class="bi bi-calendar-event"></span><span>المواعيد</span></NavLink></div>
                     </div>
                 </Authorized>
             </AuthorizeView>
@@ -469,48 +409,12 @@
                 <Authorized>
                     <div class="nav-section">
                         <div class="nav-group-title">خدمات الدكتور</div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/faculty/meeting-requests">
-                                <span class="bi bi-calendar-check"></span>
-                                <span>طلبات المواعيد</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/faculty/official-excuses">
-                                <span class="bi bi-clipboard-check"></span>
-                                <span>مراجعة الأعذار</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/faculty/grade-review-requests">
-                                <span class="bi bi-clipboard-data"></span>
-                                <span>مراجعة العلامات</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/faculty/notifications">
-                                <span class="bi bi-bell"></span>
-                                <span>التنبيهات</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/faculty/section-chats">
-                                <span class="bi bi-chat-square-text"></span>
-                                <span>محادثات الشعب</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/chat">
-                                <span class="bi bi-chat-dots"></span>
-                                <span>المحادثات</span>
-                            </NavLink>
-                        </div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/faculty/meeting-requests"><span class="bi bi-calendar-check"></span><span>طلبات المواعيد</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/faculty/official-excuses"><span class="bi bi-clipboard-check"></span><span>مراجعة الأعذار</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/faculty/grade-review-requests"><span class="bi bi-clipboard-data"></span><span>مراجعة العلامات</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/faculty/notifications"><span class="bi bi-bell"></span><span>التنبيهات</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/faculty/section-chats"><span class="bi bi-chat-square-text"></span><span>محادثات الشعب</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/chat"><span class="bi bi-chat-dots"></span><span>المحادثات</span></NavLink></div>
                     </div>
                 </Authorized>
             </AuthorizeView>
@@ -519,48 +423,12 @@
                 <Authorized>
                     <div class="nav-section">
                         <div class="nav-group-title">خدمات الطالب</div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/student/announcements">
-                                <span class="bi bi-megaphone-fill"></span>
-                                <span>التعميمات</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/student/meeting-requests">
-                                <span class="bi bi-calendar-plus"></span>
-                                <span>طلب موعد</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/student/official-excuses">
-                                <span class="bi bi-file-earmark-medical"></span>
-                                <span>الأعذار الرسمية</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/student/grade-review-requests">
-                                <span class="bi bi-journal-check"></span>
-                                <span>مراجعة العلامات</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/student/notifications">
-                                <span class="bi bi-bell"></span>
-                                <span>التنبيهات</span>
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-1">
-                            <NavLink class="nav-link" href="/chat">
-                                <span class="bi bi-chat-dots"></span>
-                                <span>المحادثات</span>
-                            </NavLink>
-                        </div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/student/announcements"><span class="bi bi-megaphone-fill"></span><span>التعميمات</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/student/meeting-requests"><span class="bi bi-calendar-plus"></span><span>طلب موعد</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/student/official-excuses"><span class="bi bi-file-earmark-medical"></span><span>الأعذار الرسمية</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/student/grade-review-requests"><span class="bi bi-journal-check"></span><span>مراجعة العلامات</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/student/notifications"><span class="bi bi-bell"></span><span>التنبيهات</span></NavLink></div>
+                        <div class="nav-item px-1"><NavLink class="nav-link" href="/chat"><span class="bi bi-chat-dots"></span><span>المحادثات</span></NavLink></div>
                     </div>
                 </Authorized>
             </AuthorizeView>
@@ -572,9 +440,7 @@
             <Authorized>
                 <div class="user-card">
                     <div class="user-card-top">
-                        <div class="user-avatar">
-                            <span class="bi bi-person-fill"></span>
-                        </div>
+                        <div class="user-avatar"><span class="bi bi-person-fill"></span></div>
                         <div class="user-info">
                             <div class="user-name">@context.User.Identity?.Name</div>
                             <div class="user-role">
@@ -584,14 +450,17 @@
                                 }
                                 else if (context.User.IsInRole("Faculty"))
                                 {
+
                                     <span>عضو هيئة تدريس</span>
                                 }
                                 else if (context.User.IsInRole("Student"))
                                 {
+
                                     <span>طالب</span>
                                 }
                                 else
                                 {
+
                                     <span>مستخدم</span>
                                 }
                             </div>
@@ -600,16 +469,13 @@
 
                     <div class="user-actions">
                         <NavLink class="nav-link" href="Account/Manage">
-                            <span class="bi bi-person-circle"></span>
-                            <span>إدارة الحساب</span>
+                            <span class="bi bi-person-circle"></span><span>إدارة الحساب</span>
                         </NavLink>
-
                         <form action="Account/Logout" method="post">
                             <AntiforgeryToken />
                             <input type="hidden" name="ReturnUrl" value="@currentUrl" />
                             <button type="submit" class="nav-link logout-btn">
-                                <span class="bi bi-box-arrow-right"></span>
-                                <span>تسجيل الخروج</span>
+                                <span class="bi bi-box-arrow-right"></span><span>تسجيل الخروج</span>
                             </button>
                         </form>
                     </div>
@@ -619,19 +485,15 @@
             <NotAuthorized>
                 <div class="user-card">
                     <div class="user-card-top">
-                        <div class="user-avatar">
-                            <span class="bi bi-person-badge"></span>
-                        </div>
+                        <div class="user-avatar"><span class="bi bi-person-badge"></span></div>
                         <div class="user-info">
                             <div class="user-name">مرحبًا بك</div>
                             <div class="user-role">سجّل الدخول للوصول إلى خدمات النظام</div>
                         </div>
                     </div>
-
                     <div class="user-actions">
                         <NavLink class="nav-link" href="Account/Login">
-                            <span class="bi bi-box-arrow-in-right"></span>
-                            <span>تسجيل الدخول</span>
+                            <span class="bi bi-box-arrow-in-right"></span><span>تسجيل الدخول</span>
                         </NavLink>
                     </div>
                 </div>

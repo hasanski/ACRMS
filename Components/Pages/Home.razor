@@ -1,4 +1,6 @@
 ﻿@page "/home"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 
 <PageTitle>الصفحة الرئيسية</PageTitle>
 
@@ -105,27 +107,21 @@
     .hero-text {
         position: relative;
         z-index: 1;
-        font-size: 1.08rem;
-        line-height: 2.1;
-        color: #4f5d6b;
-        margin: 0 auto;
+        font-size: 1.05rem;
+        line-height: 2;
+        color: #5c6773;
         max-width: 760px;
+        margin: 0 auto;
     }
 
     @@media (max-width: 768px) {
-        .home-page {
-            padding: 30px 15px;
-        }
-
         .hero-card {
-            padding: 35px 22px;
-            border-radius: 20px;
+            padding: 35px 20px;
         }
 
         .hero-logo-wrap {
             width: 120px;
             height: 120px;
-            margin-bottom: 20px;
         }
 
         .hero-logo {
@@ -171,104 +167,3 @@
         </div>
     </div>
 </div>
-@* @page "/"
-
-<PageTitle>الصفحة الرئيسية</PageTitle>
-
-<style>
-    .home-page {
-        direction: rtl;
-        padding: 40px 20px;
-    }
-
-    .home-container {
-        max-width: 900px;
-        margin: 0 auto;
-    }
-
-    .hero-card {
-        background: #ffffff;
-        border-radius: 18px;
-        padding: 40px 30px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        border: 1px solid #e9ecef;
-        text-align: center;
-    }
-
-    .hero-logo {
-        width: 130px;
-        height: auto;
-        margin-bottom: 20px;
-        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12));
-    }
-
-    .hero-title {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #1f3c88;
-        margin-bottom: 15px;
-    }
-
-    .hero-subtitle {
-        font-size: 1.3rem;
-        font-weight: 600;
-        color: #343a40;
-        margin-bottom: 25px;
-    }
-
-    .hero-text {
-        font-size: 1.05rem;
-        line-height: 2;
-        color: #555;
-        margin: 0;
-    }
-
-    .highlight {
-        color: #1f3c88;
-        font-weight: 700;
-    }
-
-    @@media (max-width: 768px) {
-        .hero-card {
-            padding: 25px 20px;
-        }
-
-        .hero-logo {
-            width: 100px;
-            margin-bottom: 15px;
-        }
-
-        .hero-title {
-            font-size: 1.7rem;
-        }
-
-        .hero-subtitle {
-            font-size: 1.1rem;
-        }
-
-        .hero-text {
-            font-size: 1rem;
-        }
-    }
-</style>
-
-<div class="home-page">
-    <div class="home-container">
-        <div class="hero-card">
-            <img src="/images/siteLogo.png" alt="ACRMS Logo" class="hero-logo" />
-
-            <h1 class="hero-title">نظام إدارة التواصل والمعاملات الأكاديمية</h1>
-
-            <div class="hero-subtitle">
-                مرحباً بكم في <span class="highlight">نظام ACRMS</span>
-            </div>
-
-            <p class="hero-text">
-                منصة إلكترونية متكاملة تهدف إلى تنظيم التواصل الرسمي بين الطلاب وأعضاء هيئة التدريس،
-                من خلال توفير بيئة مركزية موثقة وسهلة الاستخدام لإدارة التنبيهات الأكاديمية،
-                الاستدعاءات الرسمية، طلبات المواعيد، الأعذار الرسمية، وطلبات مراجعة العلامات،
-                بما يضمن وضوح الإجراءات وسهولة متابعتها بكفاءة وموثوقية.
-            </p>
-        </div>
-    </div>
-</div> *@
