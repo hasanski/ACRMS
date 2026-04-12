@@ -49,11 +49,11 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddSignalR();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-//builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    //options.UseSqlServer(connectionString));
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-options.UseSqlServer(Environment.GetEnvironmentVariable("acrmsConn")));
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//options.UseSqlServer(Environment.GetEnvironmentVariable("acrmsConn")));
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddRoles<IdentityRole>()
