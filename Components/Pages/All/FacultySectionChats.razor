@@ -12,17 +12,76 @@
 
 <PageTitle>محادثات الشعب</PageTitle>
 
+<style>
+    .hover-bg-light:hover {
+        background-color: #f8f9fa !important;
+    }
+    .bulk-message-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        color: white;
+    }
+    .bulk-message-card h5 {
+        color: white;
+        margin-bottom: 12px;
+    }
+    .bulk-message-card .form-control,
+    .bulk-message-card .form-control:focus {
+        background: rgba(255,255,255,0.95);
+        border: none;
+    }
+</style>
+
 <div class="container py-4" dir="rtl">
+    <div class="bulk-message-card shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0"><i class="bi bi-broadcast me-2"></i>إرسال رسالة جماعية</h5>
+            <button class="btn btn-sm btn-light" @onclick="ToggleSelectAll">
+                @(_allSelected ? "إلغاء تحديد الكل" : "تحديد الكل")
+            </button>
+        </div>
+        <div class="mb-2">
+            <input type="text"
+                   class="form-control"
+                   @bind="_searchText"
+                   @bind:event="oninput"
+                   placeholder="بحث بالشعبة أو المادة..." />
+        </div>
+        <div class="row">
+            <div class="col-md-8">
+                <textarea class="form-control"
+                          @bind="_bulkMessage"
+                          @oninput="OnMessageInput"
+                          rows="2"
+                          placeholder="اكتب الرسالة هنا..."></textarea>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="button" class="btn btn-success w-100"
+                        @onclick="SendBulkMessage"
+                        disabled="@(!CanSendBulkMessage)">
+                    <i class="bi bi-send me-2"></i>إرسال (@_selectedSections.Count شعبة)
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="card shadow-sm border-0 rounded-4">
         <div class="card-body">
             <h4 class="mb-3">محادثات الشعب</h4>
 
-            @if (_items.Any())
+            @if (_filteredItems.Any())
             {
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead>
                             <tr>
+                                <th style="width:50px;">
+                                    <input type="checkbox"
+                                           checked="@_allSelected"
+                                           @onchange="ToggleSelectAll" />
+                                </th>
                                 <th>#</th>
                                 <th>الشعبة</th>
                                 <th>المادة</th>
@@ -32,24 +91,32 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var item in _items)
+                            @foreach (var item in _filteredItems)
                             {
-                                <tr>
+                                <tr class="hover-bg-light" style="cursor:pointer;" @onclick="@(async _ => await ToggleSectionSelection(item))">
+                                    <td @onclick:stopPropagation>
+                                        <input type="checkbox"
+                                               checked="@_selectedSections.Contains(item.Section.Id)"
+                                               @onchange="@(async _ => await ToggleSectionSelection(item))"
+                                               @onclick:stopPropagation />
+                                    </td>
                                     <td>@item.Section.Id</td>
                                     <td>@item.Section.SectionName</td>
-                                    <td>@item.Section.Course?.CourseName</td>
-                                    <td>
+                                    <td>@(item.Section.Course?.CourseName)</td>
+                                    <td @onclick:stopPropagation>
                                         <input type="checkbox"
                                                checked="@item.IsVisibleToStudents"
-                                               @onchange="async e => await UpdateVisibility(item, e)" />
+                                               @onchange="async e => await UpdateVisibility(item, e)"
+                                               @onclick:stopPropagation />
                                     </td>
-                                    <td>
+                                    <td @onclick:stopPropagation>
                                         <input type="checkbox"
                                                checked="@item.StudentsCanReply"
                                                disabled="@(!item.IsVisibleToStudents)"
-                                               @onchange="async e => await UpdateReplyPermission(item, e)" />
+                                               @onchange="async e => await UpdateReplyPermission(item, e)"
+                                               @onclick:stopPropagation />
                                     </td>
-                                    <td class="text-end">
+                                    <td class="text-end" @onclick:stopPropagation>
                                         <button class="btn btn-sm btn-primary"
                                                 @onclick="() => OpenSectionChat(item.ConversationId)">
                                             فتح المحادثة
@@ -63,7 +130,7 @@
             }
             else
             {
-                <div class="alert alert-info">لا توجد شعب مرتبطة بك.</div>
+                <div class="alert alert-info">@(_items.Any() ? "لا توجد نتائج مطابقة للبحث" : "لا توجد شعب مرتبطة بك.")</div>
             }
         </div>
     </div>
@@ -72,6 +139,21 @@
 @code {
     private string _facultyId = string.Empty;
     private List<SectionChatItem> _items = new();
+    private List<int> _selectedSections = new();
+    private string _bulkMessage = string.Empty;
+    private string _searchText = string.Empty;
+    private bool _allSelected = false;
+
+    private bool CanSendBulkMessage =>
+        !string.IsNullOrWhiteSpace(_bulkMessage) && _selectedSections.Any();
+
+    private List<SectionChatItem> _filteredItems =>
+        string.IsNullOrWhiteSpace(_searchText)
+            ? _items
+            : _items.Where(i =>
+                i.Section.SectionName.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                (i.Section.Course?.CourseName?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false))
+            .ToList();
 
     private class SectionChatItem
     {
@@ -109,6 +191,80 @@
                 StudentsCanReply = conversation?.StudentsCanReply ?? false
             });
         }
+
+        _allSelected = false;
+    }
+
+    private void ToggleSelectAll()
+    {
+        if (_allSelected)
+        {
+            _selectedSections.Clear();
+        }
+        else
+        {
+            _selectedSections = _filteredItems.Select(i => i.Section.Id).ToList();
+        }
+        _allSelected = !_allSelected;
+
+        StateHasChanged();
+    }
+
+    private async Task ToggleSectionSelection(SectionChatItem item)
+    {
+        if (_selectedSections.Contains(item.Section.Id))
+        {
+            _selectedSections.Remove(item.Section.Id);
+        }
+        else
+        {
+            _selectedSections.Add(item.Section.Id);
+        }
+
+        _allSelected = _filteredItems.Count > 0 && _filteredItems.All(i => _selectedSections.Contains(i.Section.Id));
+        StateHasChanged();
+    }
+
+    private void OnMessageInput(ChangeEventArgs e)
+    {
+        _bulkMessage = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task SendBulkMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_bulkMessage) || !_selectedSections.Any())
+        {
+            await _JS.ToastrError("الرجاء كتابة رسالة واختيار شعب على الأقل");
+            return;
+        }
+
+        try
+        {
+            var successCount = 0;
+
+            foreach (var item in _items.Where(i => _selectedSections.Contains(i.Section.Id)))
+            {
+                try
+                {
+                    await _chatRepo.SendMessageAsync(item.ConversationId, _facultyId, _bulkMessage);
+                    successCount++;
+                }
+                catch
+                {
+                    // Continue even if one fails
+                }
+            }
+
+            await _JS.ToastrSuccess($"تم إرسال الرسالة إلى {successCount} شعبة بنجاح");
+            _bulkMessage = string.Empty;
+            _selectedSections.Clear();
+            _allSelected = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            await _JS.ToastrError($"حدث خطأ أثناء الإرسال: {ex.Message}");
+        }
     }
 
     private async Task OpenSectionChat(int conversationId)
@@ -132,7 +288,7 @@
             item.IsVisibleToStudents,
             item.StudentsCanReply);
 
-        await _JS.InvokeVoidAsync("toastr.success", "تم تحديث إعدادات المحادثة");
+        await _JS.ToastrSuccess("تم تحديث إعدادات المحادثة");
     }
 
     private async Task UpdateReplyPermission(SectionChatItem item, ChangeEventArgs e)
@@ -146,6 +302,6 @@
             item.IsVisibleToStudents,
             item.StudentsCanReply);
 
-        await _JS.InvokeVoidAsync("toastr.success", "تم تحديث صلاحية الرد");
+        await _JS.ToastrSuccess("تم تحديث صلاحية الرد");
     }
 }

@@ -174,18 +174,36 @@
 
                 <div class="new-chat-box">
                     <div class="mb-2">
-                        <select class="form-control"
-                                @bind="_selectedUserId"
-                                @onfocus="@(async _ => await EnsureUsersLoaded())">
-                            <option value="">-- اختر مستخدمًا --</option>
-                            @foreach (var user in _availableUsers)
-                            {
-                                <option value="@user.Id">@user.FullName</option>
-                            }
-                        </select>
+                        <input type="text"
+                               class="form-control"
+                               @bind="_userSearchText"
+                               @bind:event="oninput"
+                               placeholder="بحث بالاسم أو القسم..."
+                               @onfocus="@(async _ => await EnsureUsersLoaded())" />
                     </div>
 
-                    <button type="button" class="btn btn-primary w-100" @onclick="StartNewChat">
+                    <div class="mb-2" style="max-height:200px; overflow-y:auto;">
+                        @if (_filteredUsers.Any())
+                        {
+                            @foreach (var user in _filteredUsers)
+                            {
+                                <div class="p-2 border-bottom cursor-pointer hover-bg-light @(_selectedUserId == user.Id ? "bg-light" : "")"
+                                     @onclick="@(async _ => await SelectUser(user.Id))"
+                                     style="cursor:pointer; border-radius:8px; transition:background 0.2s;">
+                                    <div class="fw-bold">@user.FullName</div>
+                                    <div class="text-muted small">@(user.Department?.Name ?? "بدون قسم")</div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-muted small p-2 text-center">
+                                @(_availableUsers.Any() ? "لا توجد نتائج" : "اضغط للتحميل...")
+                            </div>
+                        }
+                    </div>
+
+                    <button type="button" class="btn btn-primary w-100" @onclick="StartNewChat" disabled="@string.IsNullOrWhiteSpace(_selectedUserId)">
                         بدء محادثة
                     </button>
                 </div>
@@ -236,7 +254,7 @@
                                     <div class="message-bubble">
                                         <div>@msg.MessageText</div>
                                         <div class="message-meta">
-                                            @msg.SenderUser?.FullName -
+                                            @(msg.SenderUser?.FullName) -
                                             @msg.SentAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                                         </div>
                                     </div>
@@ -298,6 +316,16 @@
     private bool _usersLoaded = false;
     private bool _canCurrentUserSend = true;
     private Conversation? _currentConversation;
+
+    private string _userSearchText = string.Empty;
+
+    private List<ApplicationUser> _filteredUsers =>
+        string.IsNullOrWhiteSpace(_userSearchText)
+            ? _availableUsers
+            : _availableUsers.Where(u =>
+                (u.FullName?.Contains(_userSearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.Department?.Name?.Contains(_userSearchText, StringComparison.OrdinalIgnoreCase) ?? false))
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -363,6 +391,12 @@
         _availableUsers = await _repo.GetAvailableUsersForChatAsync(_currentUserId);
         _usersLoaded = true;
 
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SelectUser(string userId)
+    {
+        _selectedUserId = userId;
         await InvokeAsync(StateHasChanged);
     }
 
